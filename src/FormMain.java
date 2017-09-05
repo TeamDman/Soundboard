@@ -1,8 +1,6 @@
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Mixer;
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -16,6 +14,9 @@ public class FormMain {
 	private JTextField txtPath;
 	private JButton btnPicker;
 	private JButton btnRelay;
+	private JList<File> listSounds;
+	private JCheckBox chkParallel;
+	private JButton btnStop;
 	private JFrame frame;
 
 	public FormMain() {
@@ -38,6 +39,12 @@ public class FormMain {
 				Main.play();
 			}
 		});
+		btnStop.addMouseListener(new ClickListener() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				Main.stop();
+			}
+		});
 		btnRelay.addMouseListener(new ClickListener() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
@@ -47,12 +54,13 @@ public class FormMain {
 		btnPicker.addMouseListener(new ClickListener() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				Main.pick();
+				pick();
 			}
 		});
-		txtPath.getDocument().addDocumentListener(new DocChangedListener() {
-			public void changed(DocumentEvent e) {
-				Main.setPicked(new File(txtPath.getText()));
+		chkParallel.addActionListener(e -> Main.allowParallelAudio = chkParallel.isSelected());
+		listSounds.addListSelectionListener(e -> {
+			if (e.getValueIsAdjusting()) {
+				Main.setPlaying(listSounds.getSelectedValue());
 			}
 		});
 
@@ -62,12 +70,31 @@ public class FormMain {
 		frame.setVisible(true);
 	}
 
-	public void setStatus(String txt) {
-		lblStatus.setText(txt);
+	private void pick() {
+		JFileChooser chooser = new JFileChooser();
+		chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		chooser.setCurrentDirectory(new File("D:/Applications/SLAM/csgo"));
+		if (chooser.showOpenDialog(panel) == JFileChooser.APPROVE_OPTION) {
+			updateFromDir(chooser.getSelectedFile());
+		}
 	}
 
-	public void setPath(String p) {
-		txtPath.setText(p);
+	private void updateFromDir(File dir) {
+		if (dir == null || !dir.exists()) {
+			setStatus("Directory contains no files!");
+			return;
+		}
+		Main.addFiles(dir.listFiles());
+
+		SwingUtilities.invokeLater(() -> {
+			listSounds.setListData(dir.listFiles());
+			txtPath.setText(dir.getPath());
+		});
+	}
+
+	public void setStatus(String txt) {
+		System.out.println(txt);
+		lblStatus.setText(txt);
 	}
 
 	private static abstract class ClickListener implements MouseListener {
@@ -92,23 +119,4 @@ public class FormMain {
 		}
 	}
 
-	private static abstract class DocChangedListener implements DocumentListener {
-		@Override
-		public void insertUpdate(DocumentEvent e) {
-			changed(e);
-		}
-
-		@Override
-		public void removeUpdate(DocumentEvent e) {
-			changed(e);
-		}
-
-		@Override
-		public void changedUpdate(DocumentEvent e) {
-			changed(e);
-		}
-
-		public abstract void changed(DocumentEvent e);
-
-	}
 }

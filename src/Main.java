@@ -1,17 +1,28 @@
 import javax.sound.sampled.*;
-import javax.swing.*;
 import java.io.File;
+import java.util.ArrayList;
 
 public class Main {
 	public static Mixer.Info outputInfo;
+	public static boolean allowParallelAudio = true;
+
 	private static FormMain window;
-	private static File picked;
+	private static File playing;
+
+	private static ArrayList<File> sounds = new ArrayList<>();
+	private static ArrayList<Clip> playingClips = new ArrayList<>();
 
 	public static void main(String[] args) {
 		window = new FormMain();
 	}
 
 	public static void play() {
+		if (playing == null || !playing.exists()){
+			window.setStatus("No sound selected");
+			return;
+		}
+		if (!allowParallelAudio)
+			stop();
 		try {
 			Clip clip = AudioSystem.getClip(outputInfo);
 			clip.addLineListener(e -> {
@@ -19,32 +30,43 @@ public class Main {
 				if (t == LineEvent.Type.START) {
 					window.setStatus("Playing");
 				} else if (t == LineEvent.Type.STOP) {
-					window.setStatus("Stopped");
+					playingClips.remove(clip);
+					if (playingClips.size() == 0)
+						window.setStatus("Stopped");
 				}
 			});
 
-			AudioInputStream stream = AudioSystem.getAudioInputStream(picked);
+			AudioInputStream stream = AudioSystem.getAudioInputStream(playing);
+
+
 			clip.open(stream);
 			clip.start();
+			playingClips.add(clip);
 		} catch (Exception e) {
+			System.out.println("Exception occurred");
+			e.printStackTrace();
 			window.setStatus(e.getLocalizedMessage());
 		}
 	}
 
-	public static void setPicked(File f) {
-		picked = f;
+	public static void stop() {
+		for (Clip clip : playingClips) {
+			clip.stop();
+		}
+		playingClips.clear();
+	}
+
+	public static void addFiles(File[] f) {
+		for (File file : f) {
+			sounds.add(file);
+		}
 	}
 
 	public static void setOutput(Mixer.Info info) {
 		outputInfo = info;
 	}
 
-	public static void pick() {
-		JFileChooser chooser = new JFileChooser();
-		chooser.setCurrentDirectory(new File("D:/Applications/SLAM/csgo"));
-		chooser.showOpenDialog(null);
-		picked = chooser.getSelectedFile();
-		if (picked.exists())
-			window.setPath(picked.getPath());
+	public static void setPlaying(File playing) {
+		Main.playing = playing;
 	}
 }
