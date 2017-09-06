@@ -1,10 +1,13 @@
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Mixer;
 import javax.swing.*;
+import javax.swing.tree.*;
 import java.awt.event.ItemEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FormMain {
 	private JComboBox comboCable;
@@ -14,12 +17,15 @@ public class FormMain {
 	private JTextField txtPath;
 	private JButton btnPicker;
 	private JButton btnRelay;
-	private JList<File> listSounds;
+//	private JList<File> listSounds;
 	private JCheckBox chkParallel;
 	private JButton btnStop;
 	private JSlider sliderVol;
 	private JComboBox comboSpeakers;
+	private JTree treeSounds;
+	private JButton btnCfg;
 	private JFrame frame;
+	private SoundTreeModel treeSoundModel;
 
 	public FormMain() {
 		frame = new JFrame("Soundboard");
@@ -37,7 +43,7 @@ public class FormMain {
 		btnPlay.addMouseListener(new ClickListener() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				Main.play(listSounds.getSelectedValuesList());
+				Main.play(getSelectedFiles());
 			}
 		});
 		btnStop.addMouseListener(new ClickListener() {
@@ -61,6 +67,12 @@ public class FormMain {
 				pick();
 			}
 		});
+		btnCfg.addMouseListener(new ClickListener() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				new FormKeys();
+			}
+		});
 		chkParallel.addActionListener(e -> Main.allowParallelAudio = chkParallel.isSelected());
 
 		sliderVol.addChangeListener(e -> {
@@ -76,6 +88,8 @@ public class FormMain {
 		}
 
 		Main.setGain(sliderVol.getValue() / 100.0f);
+		treeSounds.setModel(treeSoundModel = new SoundTreeModel());
+
 
 		frame.setContentPane(panel);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -100,9 +114,22 @@ public class FormMain {
 		Main.addFiles(dir.listFiles());
 
 		SwingUtilities.invokeLater(() -> {
-			listSounds.setListData(dir.listFiles());
+			SoundTreeModel.rebuild(dir.listFiles());
 			txtPath.setText(dir.getPath());
 		});
+	}
+
+	private List<File> getSelectedFiles() {
+//		listSounds.getSelectedValuesList()
+//		return new ArrayList<>();
+		List<File> rtn = new ArrayList<>();
+//		treeSounds.getSelectionPaths();
+		for (TreePath path : treeSounds.getSelectionModel().getSelectionPaths()){
+			DefaultMutableTreeNode selected = (DefaultMutableTreeNode) path.getLastPathComponent();
+			rtn.add((File) selected.getUserObject());
+		}
+
+		return rtn;
 	}
 
 	public void setStatus(String txt) {
@@ -129,6 +156,20 @@ public class FormMain {
 		@Override
 		public void mouseExited(MouseEvent e) {
 
+		}
+	}
+
+	private static class SoundTreeModel extends DefaultTreeModel {
+		private static DefaultMutableTreeNode root = new DefaultMutableTreeNode("Sounds");
+		public SoundTreeModel() {
+			super(root);
+		}
+
+		public static void rebuild(File[] files) {
+			root.removeAllChildren();
+			for (File f : files) {
+				root.add(new DefaultMutableTreeNode(f));
+			}
 		}
 	}
 
