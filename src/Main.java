@@ -1,4 +1,5 @@
 import javax.sound.sampled.*;
+import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,6 +17,12 @@ public class Main {
 	private static ArrayList<FloatControl> gains = new ArrayList<>();
 
 	public static void main(String[] args) {
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
 		window = new FormMain();
 		window.updateFromDir(startDir);
 	}
