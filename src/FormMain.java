@@ -17,15 +17,11 @@ public class FormMain {
 	private JList<File> listSounds;
 	private JCheckBox chkParallel;
 	private JButton btnStop;
+	private JSlider sliderVol;
 	private JFrame frame;
 
 	public FormMain() {
 		frame = new JFrame("Soundboard");
-
-		Mixer.Info[] infos = AudioSystem.getMixerInfo();
-		Main.outputInfo = infos[0];
-		for (Mixer.Info v : infos)
-			comboAudio.addItem(v);
 
 		comboAudio.addItemListener(e -> {
 			if (e.getStateChange() == ItemEvent.SELECTED) {
@@ -61,6 +57,19 @@ public class FormMain {
 			}
 		});
 		chkParallel.addActionListener(e -> Main.allowParallelAudio = chkParallel.isSelected());
+
+		sliderVol.addChangeListener(e -> {
+			Main.setGain(sliderVol.getValue()/100.0f);
+		});
+
+
+
+		Mixer.Info[] infos = AudioSystem.getMixerInfo();
+		Main.outputInfo = infos[0];
+		for (Mixer.Info v : infos)
+			comboAudio.addItem(v);
+
+		Main.setGain(sliderVol.getValue()/100.0f);
 
 		frame.setContentPane(panel);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

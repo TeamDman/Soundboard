@@ -12,6 +12,8 @@ public class Main {
 	private static ArrayList<File> sounds = new ArrayList<>();
 	private static ArrayList<Clip> playingClips = new ArrayList<>();
 	private static MicManager.ThreadMic threadMic;
+	private static float gainMod = 1.0f;
+	private static ArrayList<FloatControl> gains = new ArrayList<>();
 
 	public static void main(String[] args) {
 		window = new FormMain();
@@ -21,7 +23,6 @@ public class Main {
 	public static void play(List<File> listFiles) {
 		new Thread(() -> {
 			for (File file : listFiles) {
-
 				if (file == null || !file.exists()) {
 					window.setStatus("No sound selected");
 					return;
@@ -58,12 +59,11 @@ public class Main {
 	}
 
 	public static void stop() {
-		//		new Thread(() -> {
 		for (Clip clip : playingClips) {
 			clip.stop();
 		}
-		//		}).start();
 		playingClips.clear();
+		gains.clear();
 	}
 
 	public static void toggleRelay() {
@@ -96,6 +96,10 @@ public class Main {
 			}
 		});
 		clip.open(stream);
+
+		FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+		gains.add(gain);
+		setGain(gainMod);
 		clip.start();
 		playingClips.add(clip);
 	}
@@ -108,6 +112,13 @@ public class Main {
 
 	public static void setOutput(Mixer.Info info) {
 		outputInfo = info;
+	}
+
+	public static void setGain(float v) {
+		gainMod = v;
+		for (FloatControl gain : gains){
+			gain.setValue(((gain.getMaximum()-gain.getMinimum())*gainMod)+gain.getMinimum());
+		}
 	}
 
 	public static boolean isRelaying() {
