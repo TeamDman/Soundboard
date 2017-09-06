@@ -48,7 +48,10 @@ public class FormMain {
 		btnRelay.addMouseListener(new ClickListener() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				MicManager.init();
+				btnRelay.setText("Relay " + (Main.isRelaying() ? "stop" : "start"));
+				comboAudio.setEnabled(!Main.isRelaying());
+				Main.toggleRelay();
+
 			}
 		});
 		btnPicker.addMouseListener(new ClickListener() {
@@ -73,13 +76,13 @@ public class FormMain {
 	private void pick() {
 		JFileChooser chooser = new JFileChooser();
 		chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-		chooser.setCurrentDirectory(new File("D:/Applications/SLAM/csgo"));
+		chooser.setCurrentDirectory(Main.startDir);
 		if (chooser.showOpenDialog(panel) == JFileChooser.APPROVE_OPTION) {
 			updateFromDir(chooser.getSelectedFile());
 		}
 	}
 
-	private void updateFromDir(File dir) {
+	public void updateFromDir(File dir) {
 		if (dir == null || !dir.exists()) {
 			setStatus("Directory contains no files!");
 			return;

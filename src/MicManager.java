@@ -1,12 +1,9 @@
 import javax.sound.sampled.*;
 
 public class MicManager {
-	public static void init() {
-		new ThreadMic().start();
-	}
 
-	private static class ThreadMic extends Thread {
-
+	public static class ThreadMic extends Thread {
+		public boolean running = true;
 		@Override
 		public void run() {
 			AudioFormat format = new AudioFormat(44100,16,2,true,true);
@@ -17,7 +14,6 @@ public class MicManager {
 				targetLine.open(format);
 				targetLine.start();
 
-//				SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getLine(sourceInfo);
 				SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getMixer(Main.outputInfo).getLine(sourceInfo);
 				sourceLine.open(format);
 				sourceLine.start();
@@ -25,16 +21,19 @@ public class MicManager {
 				int numBytesRead;
 				byte[] targetData = new byte[targetLine.getBufferSize() / 5];
 
-				while (true) {
+				while (running) {
 					numBytesRead = targetLine.read(targetData, 0, targetData.length);
-
 					if (numBytesRead == -1)	break;
-
 					sourceLine.write(targetData, 0, numBytesRead);
 				}
+//				sourceLine.drain();
+				sourceLine.close();
+//				targetLine.drain();
+				targetLine.close();
 			}
 			catch (Exception e) {
-				System.err.println(e);
+				System.out.println("Exception in mic thread");
+				e.printStackTrace();
 			}
 		}
 	}
