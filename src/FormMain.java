@@ -36,7 +36,7 @@ public class FormMain {
 		btnPlay.addMouseListener(new ClickListener() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				Main.play();
+				Main.play(listSounds.getSelectedValuesList());
 			}
 		});
 		btnStop.addMouseListener(new ClickListener() {
@@ -61,11 +61,6 @@ public class FormMain {
 			}
 		});
 		chkParallel.addActionListener(e -> Main.allowParallelAudio = chkParallel.isSelected());
-		listSounds.addListSelectionListener(e -> {
-			if (e.getValueIsAdjusting()) {
-				Main.setPlaying(listSounds.getSelectedValue());
-			}
-		});
 
 		frame.setContentPane(panel);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
