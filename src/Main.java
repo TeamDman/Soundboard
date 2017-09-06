@@ -1,31 +1,47 @@
+import org.jnativehook.GlobalScreen;
+import org.jnativehook.keyboard.NativeKeyEvent;
+import org.jnativehook.keyboard.NativeKeyListener;
+
 import javax.sound.sampled.*;
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Main {
 	public static Mixer.Info infoCable;
 	public static Mixer.Info infoSpeakers;
 	public static boolean allowParallelAudio = true;
 	public static File startDir = new File("D:/Applications/SLAM/sounds");
-	private static FormMain window;
+	public static FormMain window;
+	public static FormKeys windowKeys;
 	private static ArrayList<File> sounds = new ArrayList<>();
 	private static ArrayList<Clip> playingClips = new ArrayList<>();
 	private static MicManager.ThreadMic threadMic;
 	private static float gainMod = 1.0f;
 	private static ArrayList<FloatControl> gains = new ArrayList<>();
+	private static java.util.HashMap<Integer, EnumKeyAction> keybindings = new HashMap<>();
+	private static EnumKeyAction toBind;
 
 	public static void main(String[] args) {
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+
+			GlobalScreen.registerNativeHook();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
+		GlobalScreen.addNativeKeyListener(new GlobalKeyListener());
+		Logger.getLogger(GlobalScreen.class.getPackage().getName()).setLevel(Level.OFF);
+
 		window = new FormMain();
 		window.updateFromDir(startDir);
+
 	}
 
 	public static void play(List<File> listFiles) {
@@ -128,19 +144,77 @@ public class Main {
 	public static void setInfoCable(Mixer.Info info) {
 		infoCable = info;
 	}
+
 	public static void setInfoSpeakers(Mixer.Info info) {
 		infoSpeakers = info;
 	}
 
 	public static void setGain(float v) {
 		gainMod = v;
-		for (FloatControl gain : gains){
-			gain.setValue(((gain.getMaximum()-gain.getMinimum())*gainMod)+gain.getMinimum());
+		for (FloatControl gain : gains) {
+			gain.setValue(((gain.getMaximum() - gain.getMinimum()) * gainMod) + gain.getMinimum());
 		}
+	}
+
+	public static void setBinding(EnumKeyAction action) {
+		toBind=action;
 	}
 
 	public static boolean isRelaying() {
 		return threadMic == null;
 	}
 
+	private static class GlobalKeyListener implements NativeKeyListener {
+		public void nativeKeyPressed(NativeKeyEvent e) {
+			System.out.println("Keydown: " + NativeKeyEvent.getKeyText(e.getKeyCode()));
+			if (toBind != null) {
+				System.out.println("BINDING KEY");
+				keybindings.put(e.getRawCode(), toBind);
+				toBind.setKey(e.getKeyCode());
+				windowKeys.updateButtons();
+				toBind = null;
+			} else {
+				EnumKeyAction exec;
+				if ((exec = keybindings.get(e.getRawCode())) != null )
+					exec.getAction().run();
+			}
+		}
+
+		@Override
+		public void nativeKeyTyped(NativeKeyEvent nativeKeyEvent) {
+
+		}
+
+		@Override
+		public void nativeKeyReleased(NativeKeyEvent nativeKeyEvent) {
+
+		}
+	}
+
+	public static enum EnumKeyAction {
+		PLAY,
+		STOP;
+
+		private Runnable action;
+		private int key;
+		public void setAction(Runnable action) {
+			this.action = action;
+		}
+		public Runnable getAction() {
+			return action;
+		}
+
+		public void setKey(int key) {
+			this.key = key;
+		}
+
+		public int getKey() {
+			return key;
+		}
+	}
+
+	static {
+		EnumKeyAction.PLAY.setAction(()->Main.play(Main.window.getSelectedFiles()));
+		EnumKeyAction.STOP.setAction(Main::stop);
+	}
 }
