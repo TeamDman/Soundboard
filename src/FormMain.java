@@ -25,7 +25,12 @@ public class FormMain {
 		frame = new JFrame("Soundboard");
 		comboCable.addItemListener(e -> {
 			if (e.getStateChange() == ItemEvent.SELECTED) {
-				Main.setOutput((Mixer.Info) e.getItem());
+				Main.setInfoCable((Mixer.Info) e.getItem());
+			}
+		});
+		comboSpeakers.addItemListener(e -> {
+			if (e.getStateChange() == ItemEvent.SELECTED) {
+				Main.setInfoSpeakers((Mixer.Info) e.getItem());
 			}
 		});
 
@@ -59,17 +64,18 @@ public class FormMain {
 		chkParallel.addActionListener(e -> Main.allowParallelAudio = chkParallel.isSelected());
 
 		sliderVol.addChangeListener(e -> {
-			Main.setGain(sliderVol.getValue()/100.0f);
+			Main.setGain(sliderVol.getValue() / 100.0f);
 		});
 
 		Mixer.Info[] infos = AudioSystem.getMixerInfo();
-		Main.outputInfo = infos[0];
-		for (Mixer.Info v : infos){
+		Main.infoCable = infos[0];
+		Main.infoSpeakers = infos[0];
+		for (Mixer.Info v : infos) {
 			comboCable.addItem(v);
 			comboSpeakers.addItem(v);
 		}
 
-		Main.setGain(sliderVol.getValue()/100.0f);
+		Main.setGain(sliderVol.getValue() / 100.0f);
 
 		frame.setContentPane(panel);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

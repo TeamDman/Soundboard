@@ -6,7 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
-	public static Mixer.Info outputInfo;
+	public static Mixer.Info infoCable;
+	public static Mixer.Info infoSpeakers;
 	public static boolean allowParallelAudio = true;
 	public static File startDir = new File("D:/Applications/SLAM/sounds");
 	private static FormMain window;
@@ -39,12 +40,21 @@ public class Main {
 				}
 				try {
 					if (file.getName().replaceAll("^.*\\.(.*)$", "$1").equals("wav")) {
-						playClip(AudioSystem.getAudioInputStream(file), file.getName());
+						playClip(AudioSystem.getAudioInputStream(file), infoCable, file.getName());
+						playClip(AudioSystem.getAudioInputStream(file), infoSpeakers, file.getName());
 					} else {
 						System.out.println("Not WAV, converting and playing");
 						AudioInputStream stream = AudioSystem.getAudioInputStream(file);
-						AudioInputStream decodedStream;
 						AudioFormat format = new AudioFormat(44100, 16, 2, true, true);
+						playClip(AudioSystem.getAudioInputStream(format, stream), infoSpeakers, file.getName());
+
+						AudioInputStream streama = AudioSystem.getAudioInputStream(file);
+						AudioFormat formata = new AudioFormat(44100, 16, 2, true, true);
+						playClip(AudioSystem.getAudioInputStream(formata, streama), infoCable, file.getName());
+
+						//lol why do I need to copypaste this for it to work instead of sharing the original audioinputstream ;-;
+
+
 						//				AudioFormat formatBase = stream.getFormat();
 						//				AudioFormat format = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
 						//										formatBase.getSampleRate(),
@@ -53,8 +63,6 @@ public class Main {
 						//										formatBase.getChannels() * 2,
 						//										formatBase.getSampleRate(),
 						//										false);
-						decodedStream = AudioSystem.getAudioInputStream(format, stream);
-						playClip(decodedStream, file.getName());
 					}
 				} catch (Exception e) {
 					System.out.println("Exception occurred");
@@ -90,8 +98,8 @@ public class Main {
 		}
 	}
 
-	private static void playClip(AudioInputStream stream, String name) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
-		Clip clip = AudioSystem.getClip(outputInfo);
+	private static void playClip(AudioInputStream stream, Mixer.Info info, String name) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
+		Clip clip = AudioSystem.getClip(info);
 		clip.addLineListener(e -> {
 			LineEvent.Type t = e.getType();
 			if (t == LineEvent.Type.START) {
@@ -117,8 +125,11 @@ public class Main {
 		}
 	}
 
-	public static void setOutput(Mixer.Info info) {
-		outputInfo = info;
+	public static void setInfoCable(Mixer.Info info) {
+		infoCable = info;
+	}
+	public static void setInfoSpeakers(Mixer.Info info) {
+		infoSpeakers = info;
 	}
 
 	public static void setGain(float v) {
