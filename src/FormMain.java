@@ -3,7 +3,6 @@ import javax.sound.sampled.Mixer;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.event.ItemEvent;
 import java.awt.event.MouseEvent;
@@ -29,16 +28,17 @@ public class FormMain {
 	private JTree treeSounds;
 	private JButton btnCfg;
 	private SoundTreeModel treeSoundModel;
+	private int debounce = 3;
 
 	public FormMain() {
 		frame = new JFrame("Soundboard");
 		comboCable.addItemListener(e -> {
-			if (e.getStateChange() == ItemEvent.SELECTED) {
+			if (e.getStateChange() == ItemEvent.SELECTED && --debounce < 0) {
 				Main.setInfoCable((Mixer.Info) e.getItem());
 			}
 		});
 		comboSpeakers.addItemListener(e -> {
-			if (e.getStateChange() == ItemEvent.SELECTED) {
+			if (e.getStateChange() == ItemEvent.SELECTED && --debounce < 0) {
 				Main.setInfoSpeakers((Mixer.Info) e.getItem());
 			}
 		});
@@ -58,10 +58,7 @@ public class FormMain {
 		btnRelay.addMouseListener(new ClickListener() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				btnRelay.setText("Relay " + (Main.isRelaying() ? "stop" : "start"));
-				comboCable.setEnabled(!Main.isRelaying());
-				Main.toggleRelay();
-
+				toggleRelay();
 			}
 		});
 		btnPicker.addMouseListener(new ClickListener() {
@@ -82,25 +79,33 @@ public class FormMain {
 		chkParallel.addActionListener(e -> Main.allowParallelAudio = chkParallel.isSelected());
 
 		sliderVol.addChangeListener(e -> {
-			Main.setGain(sliderVol.getValue() / 100.0f);
+			if (--debounce < 0)
+				Main.setGain(sliderVol.getValue() / 100.0f);
 		});
 
 		Mixer.Info[] infos = AudioSystem.getMixerInfo();
-		Main.infoCable = infos[0];
-		Main.infoSpeakers = infos[0];
 		for (Mixer.Info v : infos) {
 			comboCable.addItem(v);
 			comboSpeakers.addItem(v);
 		}
+		updateCombos();
 
-		Main.setGain(sliderVol.getValue() / 100.0f);
+		sliderVol.setValue((int) (Main.getGain() * 100));
+
 		treeSounds.setModel(treeSoundModel = new SoundTreeModel());
+		treeSounds.updateUI();
 
 
 		frame.setContentPane(panel);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.pack();
 		frame.setVisible(true);
+	}
+
+	public void toggleRelay() {
+		btnRelay.setText("Relay " + (Main.isRelaying() ? "stop" : "start"));
+		comboCable.setEnabled(!Main.isRelaying());
+		Main.toggleRelay();
 	}
 
 	private void pick() {
@@ -110,6 +115,8 @@ public class FormMain {
 		if (chooser.showOpenDialog(panel) == JFileChooser.APPROVE_OPTION) {
 			updateFromDir(chooser.getSelectedFile());
 		}
+		Main.startDir = chooser.getSelectedFile();
+		PreferenceManager.save();
 	}
 
 	public void updateFromDir(File dir) {
@@ -121,6 +128,8 @@ public class FormMain {
 
 		SwingUtilities.invokeLater(() -> {
 			SoundTreeModel.rebuild(dir.listFiles());
+			if (SoundTreeModel.getRootNode().getFirstChild() != null)
+				treeSounds.setSelectionPath(new TreePath(treeSoundModel.getPathToRoot(SoundTreeModel.getNodes().get(0))));
 			txtPath.setText(dir.getPath());
 		});
 	}
@@ -129,39 +138,52 @@ public class FormMain {
 		sliderVol.setValue((int) (Main.getGain() * 100));
 	}
 
+	public void updateCombos() {
+		debounce=2;
+		comboCable.setSelectedItem(Main.getInfoCable());
+		comboSpeakers.setSelectedItem(Main.getInfoSpeakers());
+		debounce=0;
+	}
+
 	public void updateNext() {
 		if (Main.isKeyControlDown) {
-			TreePath[] selected = treeSounds.getSelectionPaths();
 			TreePath[] paths = SoundTreeModel.getNodes().stream()
-					.map(e->new TreePath(treeSoundModel.getPathToRoot(e)))
+					.map(e -> new TreePath(treeSoundModel.getPathToRoot(e)))
 					.toArray(TreePath[]::new);
+			if (treeSounds.getSelectionPaths() == null || treeSounds.getSelectionPaths().length == 0) {
+				treeSounds.setSelectionPath(paths[0]);
+			}
+			TreePath[] selected = treeSounds.getSelectionPaths();
 			TreePath[] replace = new TreePath[selected.length];
 			for (int i = 0; i < selected.length; i++) {
 				for (int v = 0; v < paths.length; v++) {
 					if (selected[i].equals(paths[v]) && v + 1 < paths.length)
-						replace[i]=paths[v+1];
+						replace[i] = paths[v + 1];
 				}
 			}
 			treeSounds.setSelectionPaths(replace);
-			SwingUtilities.invokeLater(()->treeSounds.scrollPathToVisible(replace[0]));
+			SwingUtilities.invokeLater(() -> treeSounds.scrollPathToVisible(replace[0]));
 		}
 	}
 
 	public void updatePrev() {
 		if (Main.isKeyControlDown) {
-			TreePath[] selected = treeSounds.getSelectionPaths();
 			TreePath[] paths = SoundTreeModel.getNodes().stream()
-					.map(e->new TreePath(treeSoundModel.getPathToRoot(e)))
+					.map(e -> new TreePath(treeSoundModel.getPathToRoot(e)))
 					.toArray(TreePath[]::new);
+			if (treeSounds.getSelectionPaths() == null || treeSounds.getSelectionPaths().length == 0) {
+				treeSounds.setSelectionPath(paths[0]);
+			}
+			TreePath[] selected = treeSounds.getSelectionPaths();
 			TreePath[] replace = new TreePath[selected.length];
 			for (int i = 0; i < selected.length; i++) {
 				for (int v = 0; v < paths.length; v++) {
 					if (selected[i].equals(paths[v]) && v > 0)
-						replace[i]=paths[v-1];
+						replace[i] = paths[v - 1];
 				}
 			}
 			treeSounds.setSelectionPaths(replace);
-			SwingUtilities.invokeLater(()->treeSounds.scrollPathToVisible(replace[0]));
+			SwingUtilities.invokeLater(() -> treeSounds.scrollPathToVisible(replace[0]));
 		}
 	}
 
@@ -223,6 +245,10 @@ public class FormMain {
 
 		public static ArrayList<DefaultMutableTreeNode> getNodes() {
 			return nodes;
+		}
+
+		public static DefaultMutableTreeNode getRootNode() {
+			return root;
 		}
 	}
 

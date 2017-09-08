@@ -1,6 +1,7 @@
 import org.jnativehook.keyboard.NativeKeyEvent;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ public class FormKeys {
 	private JButton btnVolDown;
 	private JButton btnNext;
 	private JButton btnPrev;
+	private JButton btnRelay;
 	private ArrayList<BindingButton> buttons = new ArrayList<>();
 
 	public FormKeys() {
@@ -27,7 +29,7 @@ public class FormKeys {
 		new BindingButton(btnVolDown, "VolDown", Main.EnumKeyAction.VOLDOWN);
 		new BindingButton(btnNext, "Next", Main.EnumKeyAction.NEXT);
 		new BindingButton(btnPrev, "Prev", Main.EnumKeyAction.PREV);
-
+		new BindingButton(btnRelay,"Relay",Main.EnumKeyAction.RELAY);
 
 		btnDone.addMouseListener(new FormMain.ClickListener() {
 			@Override
@@ -36,11 +38,19 @@ public class FormKeys {
 			}
 		});
 
+
+		updateButtons();
+
+//		frame.setDefaultLookAndFeelDecorated(true);
+////		frame.getRootPane().setWindowDecorationStyle(JRootPane.NONE);
 		frame.setContentPane(panel);
 		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		frame.pack();
 		frame.setVisible(true);
-		frame.setLocation(Main.window.frame.getLocation());
+
+		Point loc = Main.window.frame.getLocation();
+		loc.translate(Main.window.frame.getWidth()/2-frame.getWidth()/2,Main.window.frame.getHeight()/2-frame.getHeight()/2);
+		frame.setLocation(loc);
 	}
 
 	public void updateButtons() {
@@ -61,12 +71,11 @@ public class FormKeys {
 			this.name = name;
 			this.action = action;
 			buttons.add(this);
-			btn.setText(name + " [undefined]");
 			btn.addMouseListener(new ClickBinderListener(action));
 		}
 
 		public void update() {
-			btn.setText(name + "[" + NativeKeyEvent.getKeyText(action.getKey()) + "]");
+			btn.setText(name + " [" + action.getKeyName() + "]");
 		}
 	}
 

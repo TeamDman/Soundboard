@@ -16,9 +16,11 @@ public class Main {
 	public static Mixer.Info infoCable;
 	public static Mixer.Info infoSpeakers;
 	public static boolean allowParallelAudio = true;
-	public static File startDir = new File("D:/Applications/SLAM/sounds");
+	public static File startDir;
 	public static FormMain window;
 	public static FormKeys windowKeys;
+	public static boolean isKeyShiftDown = false;
+	public static boolean isKeyControlDown = false;
 	private static ArrayList<File> sounds = new ArrayList<>();
 	private static ArrayList<Clip> playingClips = new ArrayList<>();
 	private static MicManager.ThreadMic threadMic;
@@ -27,13 +29,19 @@ public class Main {
 	private static java.util.HashMap<Integer, EnumKeyAction> keybindings = new HashMap<>();
 	private static EnumKeyAction toBind;
 
-	public static boolean isKeyShiftDown = false;
-	public static boolean isKeyControlDown = false;
+	static {
+		EnumKeyAction.PLAY.setAction(() -> Main.play(Main.window.getSelectedFiles()));
+		EnumKeyAction.STOP.setAction(Main::stop);
+		EnumKeyAction.VOLUP.setAction(Main::increaseGain);
+		EnumKeyAction.VOLDOWN.setAction(Main::decreaseGain);
+		EnumKeyAction.NEXT.setAction(Main::soundNext);
+		EnumKeyAction.PREV.setAction(Main::soundPrev);
+		EnumKeyAction.RELAY.setAction(() -> window.toggleRelay());
+	}
 
 	public static void main(String[] args) {
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-
 			GlobalScreen.registerNativeHook();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -41,6 +49,7 @@ public class Main {
 
 		GlobalScreen.addNativeKeyListener(new GlobalKeyListener());
 		Logger.getLogger(GlobalScreen.class.getPackage().getName()).setLevel(Level.OFF);
+		PreferenceManager.init();
 
 		window = new FormMain();
 		window.updateFromDir(startDir);
@@ -144,32 +153,57 @@ public class Main {
 		}
 	}
 
+	public static Mixer.Info getInfoCable() {
+		return infoCable;
+	}
+
 	public static void setInfoCable(Mixer.Info info) {
+		boolean update = infoCable != null;
 		infoCable = info;
+
+		if (update)
+			PreferenceManager.save();
+		if (window != null)
+			window.updateCombos();
+	}
+
+	public static Mixer.Info getInfoSpeakers() {
+		return infoSpeakers;
 	}
 
 	public static void setInfoSpeakers(Mixer.Info info) {
+		boolean update = infoCable != null;
 		infoSpeakers = info;
-	}
 
-	public static void setGain(float v) {
-		gainMod = v;
-		for (FloatControl gain : gains) {
-			gain.setValue(((gain.getMaximum() - gain.getMinimum()) * gainMod) + gain.getMinimum());
-		}
+		if (update)
+			PreferenceManager.save();
+		if (window != null)
+			window.updateCombos();
 	}
 
 	public static float getGain() {
 		return gainMod;
 	}
 
+	public static void setGain(float v) {
+		gainMod = v;
+		PreferenceManager.save();
+		for (FloatControl gain : gains) {
+			gain.setValue(((gain.getMaximum() - gain.getMinimum()) * gainMod) + gain.getMinimum());
+		}
+	}
+
+	public static void setGain(float v, boolean b) {
+		gainMod = v;
+	}
+
 	public static void increaseGain() {
-		gainMod = Math.min(gainMod+0.02f,1);
+		gainMod = Math.min(gainMod + 0.02f, 1);
 		window.updateVol();
 	}
 
 	public static void decreaseGain() {
-		gainMod = Math.max(gainMod-0.02f,0);
+		gainMod = Math.max(gainMod - 0.02f, 0);
 		window.updateVol();
 	}
 
@@ -182,11 +216,52 @@ public class Main {
 	}
 
 	public static void setBinding(EnumKeyAction action) {
-		toBind=action;
+		toBind = action;
+	}
+
+	public static void setBinding(EnumKeyAction action, int key, String keyName) {
+		keybindings.put(key, action);
+		action.setKey(key, keyName);
+		toBind = null;
 	}
 
 	public static boolean isRelaying() {
 		return threadMic == null;
+	}
+
+	public enum EnumKeyAction {
+		PLAY,
+		STOP,
+		VOLUP,
+		VOLDOWN,
+		NEXT,
+		PREV,
+		RELAY;
+
+		private Runnable action;
+		private int key = 0;
+		private String keyName = "undefined";
+
+		public Runnable getAction() {
+			return action;
+		}
+
+		public void setAction(Runnable action) {
+			this.action = action;
+		}
+
+		public void setKey(int key, String keyName) {
+			this.key = key;
+			this.keyName = keyName;
+		}
+
+		public int getKey() {
+			return key;
+		}
+
+		public String getKeyName() {
+			return keyName;
+		}
 	}
 
 	private static class GlobalKeyListener implements NativeKeyListener {
@@ -197,13 +272,12 @@ public class Main {
 				isKeyShiftDown = true;
 			if (toBind != null) {
 				System.out.println("BINDING KEY");
-				keybindings.put(e.getRawCode(), toBind);
-				toBind.setKey(e.getKeyCode());
+				setBinding(toBind, e.getRawCode(), NativeKeyEvent.getKeyText(e.getKeyCode()));
+				PreferenceManager.save();
 				windowKeys.updateButtons();
-				toBind = null;
 			} else {
 				EnumKeyAction exec;
-				if ((exec = keybindings.get(e.getRawCode())) != null )
+				if ((exec = keybindings.get(e.getRawCode())) != null)
 					exec.getAction().run();
 			}
 		}
@@ -220,40 +294,5 @@ public class Main {
 			if (e.getKeyCode() == NativeKeyEvent.SHIFT_L_MASK)
 				isKeyShiftDown = false;
 		}
-	}
-
-	public static enum EnumKeyAction {
-		PLAY,
-		STOP,
-		VOLUP,
-		VOLDOWN,
-		NEXT,
-		PREV;
-
-		private Runnable action;
-		private int key;
-		public void setAction(Runnable action) {
-			this.action = action;
-		}
-		public Runnable getAction() {
-			return action;
-		}
-
-		public void setKey(int key) {
-			this.key = key;
-		}
-
-		public int getKey() {
-			return key;
-		}
-	}
-
-	static {
-		EnumKeyAction.PLAY.setAction(()->Main.play(Main.window.getSelectedFiles()));
-		EnumKeyAction.STOP.setAction(Main::stop);
-		EnumKeyAction.VOLUP.setAction(Main::increaseGain);
-		EnumKeyAction.VOLDOWN.setAction(Main::decreaseGain);
-		EnumKeyAction.NEXT.setAction(Main::soundNext);
-		EnumKeyAction.PREV.setAction(Main::soundPrev);
 	}
 }
