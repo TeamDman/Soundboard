@@ -138,7 +138,7 @@ public class FormMain {
 			setStatus("Directory contains no files!");
 			return;
 		}
-		Main.addFiles(dir.listFiles());
+//		Main.addFiles(dir.listFiles());
 
 		SwingUtilities.invokeLater(() -> {
 			SoundTreeModel.rebuild(dir.listFiles());

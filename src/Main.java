@@ -15,7 +15,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
-	private static final ArrayList<File> sounds = new ArrayList<>();
+//	private static final ArrayList<File> sounds = new ArrayList<>();
 	private static final ArrayList<Clip> playingClips = new ArrayList<>();
 	private static final ArrayList<FloatControl> gains = new ArrayList<>();
 	private static final java.util.HashMap<Integer, EnumKeyAction> keybindings = new HashMap<>();
@@ -125,9 +125,9 @@ public class Main {
 		playingClips.add(clip);
 	}
 
-	public static void addFiles(File[] f) {
-		Collections.addAll(sounds, f);
-	}
+//	public static void addFiles(File[] f) {
+//		Collections.addAll(sounds, f);
+//	}
 
 	public static void toggleRelay() {
 		if (threadMic != null) {
