@@ -13,6 +13,7 @@ import java.util.List;
 
 public class FormMain {
 	public final JFrame frame;
+	private final SoundTreeModel treeSoundModel;
 	private JComboBox comboCable;
 	private JLabel lblStatus;
 	private JButton btnPlay;
@@ -27,7 +28,7 @@ public class FormMain {
 	private JTree treeSounds;
 	private JButton btnCfg;
 	private JCheckBox chkOnTop;
-	private final SoundTreeModel treeSoundModel;
+	private JCheckBox chkAutoRelay;
 	private int debounce = 3;
 
 	public FormMain() {
@@ -76,8 +77,13 @@ public class FormMain {
 				Main.windowKeys = new FormKeys();
 			}
 		});
+
 		chkParallel.addActionListener(e -> Main.allowParallelAudio = chkParallel.isSelected());
 		chkOnTop.addActionListener(e -> frame.setAlwaysOnTop(chkOnTop.isSelected()));
+		chkAutoRelay.addActionListener(e -> {
+			PreferenceManager.autoRelay = chkAutoRelay.isSelected();
+			PreferenceManager.save();
+		});
 
 		sliderVol.addChangeListener(e -> {
 			if (--debounce < 0)
@@ -96,17 +102,24 @@ public class FormMain {
 		treeSounds.setModel(treeSoundModel = new SoundTreeModel());
 		treeSounds.updateUI();
 
-		frame.setAlwaysOnTop(true);
+		if (PreferenceManager.autoRelay) {
+			toggleRelay();
+		}
+
+		chkOnTop.setSelected(PreferenceManager.alwaysOnTop);
+		chkAutoRelay.setSelected(PreferenceManager.autoRelay);
+
 		frame.setContentPane(panel);
+		//noinspection MagicConstant
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.pack();
 		frame.setVisible(true);
 	}
 
-	public void toggleRelay() {
+	void toggleRelay() {
+		Main.toggleRelay();
 		btnRelay.setText("Relay " + (Main.isRelaying() ? "stop" : "start"));
 		comboCable.setEnabled(!Main.isRelaying());
-		Main.toggleRelay();
 	}
 
 	private void pick() {
@@ -120,7 +133,7 @@ public class FormMain {
 		PreferenceManager.save();
 	}
 
-	public void updateFromDir(File dir) {
+	void updateFromDir(File dir) {
 		if (dir == null || !dir.exists()) {
 			setStatus("Directory contains no files!");
 			return;
@@ -135,18 +148,32 @@ public class FormMain {
 		});
 	}
 
-	public void updateVol() {
-		sliderVol.setValue((int) (Main.getGain() * 100));
+	void setStatus(String txt) {
+		System.out.println(txt);
+		lblStatus.setText(txt);
 	}
 
-	public void updateCombos() {
+	List<File> getSelectedFiles() {
+		List<File> rtn = new ArrayList<>();
+		for (TreePath path : treeSounds.getSelectionModel().getSelectionPaths()) {
+			DefaultMutableTreeNode selected = (DefaultMutableTreeNode) path.getLastPathComponent();
+			rtn.add((File) selected.getUserObject());
+		}
+		return rtn;
+	}
+
+	void updateCombos() {
 		debounce = 2;
 		comboCable.setSelectedItem(Main.getInfoCable());
 		comboSpeakers.setSelectedItem(Main.getInfoSpeakers());
 		debounce = 0;
 	}
 
-	public void updateNext() {
+	void updateVol() {
+		sliderVol.setValue((int) (Main.getGain() * 100));
+	}
+
+	void updateNext() {
 		TreePath[] paths = SoundTreeModel.getNodes().stream()
 				.map(e -> new TreePath(treeSoundModel.getPathToRoot(e)))
 				.toArray(TreePath[]::new);
@@ -166,7 +193,7 @@ public class FormMain {
 
 	}
 
-	public void updatePrev() {
+	void updatePrev() {
 		TreePath[] paths = SoundTreeModel.getNodes().stream()
 				.map(e -> new TreePath(treeSoundModel.getPathToRoot(e)))
 				.toArray(TreePath[]::new);
@@ -183,20 +210,6 @@ public class FormMain {
 		}
 		treeSounds.setSelectionPaths(replace);
 		SwingUtilities.invokeLater(() -> treeSounds.scrollPathToVisible(replace[0]));
-	}
-
-	public List<File> getSelectedFiles() {
-		List<File> rtn = new ArrayList<>();
-		for (TreePath path : treeSounds.getSelectionModel().getSelectionPaths()) {
-			DefaultMutableTreeNode selected = (DefaultMutableTreeNode) path.getLastPathComponent();
-			rtn.add((File) selected.getUserObject());
-		}
-		return rtn;
-	}
-
-	public void setStatus(String txt) {
-		System.out.println(txt);
-		lblStatus.setText(txt);
 	}
 
 	public static abstract class ClickListener implements MouseListener {

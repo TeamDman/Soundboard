@@ -15,20 +15,18 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
+	private static final ArrayList<File> sounds = new ArrayList<>();
+	private static final ArrayList<Clip> playingClips = new ArrayList<>();
+	private static final ArrayList<FloatControl> gains = new ArrayList<>();
+	private static final java.util.HashMap<Integer, EnumKeyAction> keybindings = new HashMap<>();
 	public static Mixer.Info infoCable;
-	private static Mixer.Info infoSpeakers;
 	public static boolean allowParallelAudio = true;
 	public static File startDir;
 	public static FormMain window;
 	public static FormKeys windowKeys;
-	private static boolean isKeyShiftDown = false;
-	private static boolean isKeyControlDown = false;
-	private static final ArrayList<File> sounds = new ArrayList<>();
-	private static final ArrayList<Clip> playingClips = new ArrayList<>();
+	private static Mixer.Info infoSpeakers;
 	private static MicManager.ThreadMic threadMic;
 	private static float gainMod = 1.0f;
-	private static final ArrayList<FloatControl> gains = new ArrayList<>();
-	private static final java.util.HashMap<Integer, EnumKeyAction> keybindings = new HashMap<>();
 	private static EnumKeyAction toBind;
 
 	static {
@@ -53,7 +51,7 @@ public class Main {
 		Logger.getLogger(GlobalScreen.class.getPackage().getName()).setLevel(Level.OFF);
 		PreferenceManager.init();
 
-		EventQueue.invokeLater(()->{
+		EventQueue.invokeLater(() -> {
 			window = new FormMain();
 			window.updateFromDir(startDir);
 		});
@@ -110,23 +108,6 @@ public class Main {
 		gains.clear();
 	}
 
-	public static void toggleRelay() {
-		if (threadMic != null) {
-			try {
-				threadMic.running = false;
-				threadMic.join();
-				threadMic = null;
-			} catch (Exception e) {
-				System.out.println("Exception relaying mic");
-				e.printStackTrace();
-				window.setStatus(e.getLocalizedMessage());
-			}
-		} else {
-			threadMic = new MicManager.ThreadMic();
-			threadMic.start();
-		}
-	}
-
 	private static void playClip(AudioInputStream stream, Mixer.Info info, String name) throws LineUnavailableException, IOException {
 		Clip clip = AudioSystem.getClip(info);
 		clip.addLineListener(e -> {
@@ -147,6 +128,24 @@ public class Main {
 	public static void addFiles(File[] f) {
 		Collections.addAll(sounds, f);
 	}
+
+	public static void toggleRelay() {
+		if (threadMic != null) {
+			try {
+				threadMic.running = false;
+				threadMic.join();
+				threadMic = null;
+			} catch (Exception e) {
+				System.out.println("Exception relaying mic");
+				e.printStackTrace();
+				window.setStatus(e.getLocalizedMessage());
+			}
+		} else {
+			threadMic = new MicManager.ThreadMic();
+			threadMic.start();
+		}
+	}
+
 
 	public static Mixer.Info getInfoCable() {
 		return infoCable;
@@ -192,6 +191,7 @@ public class Main {
 		gainMod = v;
 	}
 
+
 	private static void increaseGain() {
 		gainMod = Math.min(gainMod + 0.02f, 1);
 		window.updateVol();
@@ -210,6 +210,7 @@ public class Main {
 		window.updatePrev();
 	}
 
+
 	public static void setBinding(EnumKeyAction action) {
 		toBind = action;
 	}
@@ -221,8 +222,9 @@ public class Main {
 	}
 
 	public static boolean isRelaying() {
-		return threadMic == null;
+		return threadMic != null;
 	}
+
 
 	public enum EnumKeyAction {
 		PLAY,
@@ -260,11 +262,11 @@ public class Main {
 	}
 
 	private static class GlobalKeyListener implements NativeKeyListener {
+		@Override
+		public void nativeKeyTyped(NativeKeyEvent e) {
+		}
+
 		public void nativeKeyPressed(NativeKeyEvent e) {
-			if (e.getKeyCode() == NativeKeyEvent.VC_CONTROL)
-				isKeyControlDown = true;
-			if (e.getKeyCode() == NativeKeyEvent.SHIFT_L_MASK)
-				isKeyShiftDown = true;
 			if (toBind != null) {
 				System.out.println("BINDING KEY");
 				setBinding(toBind, e.getRawCode(), NativeKeyEvent.getKeyText(e.getKeyCode()));
@@ -278,14 +280,7 @@ public class Main {
 		}
 
 		@Override
-		public void nativeKeyTyped(NativeKeyEvent e) {}
-
-		@Override
 		public void nativeKeyReleased(NativeKeyEvent e) {
-			if (e.getKeyCode() == NativeKeyEvent.VC_CONTROL)
-				isKeyControlDown = false;
-			if (e.getKeyCode() == NativeKeyEvent.SHIFT_L_MASK)
-				isKeyShiftDown = false;
 		}
 	}
 }

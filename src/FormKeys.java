@@ -5,7 +5,7 @@ import java.awt.event.MouseListener;
 import java.util.ArrayList;
 
 public class FormKeys {
-	private JFrame frame;
+	private final JFrame frame;
 	private JButton btnPlay;
 	private JPanel panel;
 	private JButton btnDone;
@@ -15,7 +15,7 @@ public class FormKeys {
 	private JButton btnNext;
 	private JButton btnPrev;
 	private JButton btnRelay;
-	private ArrayList<BindingButton> buttons = new ArrayList<>();
+	private final ArrayList<BindingButton> buttons = new ArrayList<>();
 
 	public FormKeys() {
 		frame = new JFrame("Keybindings");
@@ -26,7 +26,7 @@ public class FormKeys {
 		new BindingButton(btnVolDown, "VolDown", Main.EnumKeyAction.VOLDOWN);
 		new BindingButton(btnNext, "Next", Main.EnumKeyAction.NEXT);
 		new BindingButton(btnPrev, "Prev", Main.EnumKeyAction.PREV);
-		new BindingButton(btnRelay,"Relay",Main.EnumKeyAction.RELAY);
+		new BindingButton(btnRelay, "Relay", Main.EnumKeyAction.RELAY);
 
 		btnDone.addMouseListener(new FormMain.ClickListener() {
 			@Override
@@ -43,7 +43,7 @@ public class FormKeys {
 		frame.setVisible(true);
 
 		Point loc = Main.window.frame.getLocation();
-		loc.translate(Main.window.frame.getWidth()/2-frame.getWidth()/2,Main.window.frame.getHeight()/2-frame.getHeight()/2);
+		loc.translate(Main.window.frame.getWidth() / 2 - frame.getWidth() / 2, Main.window.frame.getHeight() / 2 - frame.getHeight() / 2);
 		frame.setLocation(loc);
 	}
 
@@ -56,9 +56,9 @@ public class FormKeys {
 	}
 
 	private class BindingButton {
-		JButton btn;
-		String name;
-		Main.EnumKeyAction action;
+		final JButton btn;
+		final String name;
+		final Main.EnumKeyAction action;
 
 		BindingButton(JButton btn, String name, Main.EnumKeyAction action) {
 			this.btn = btn;
@@ -74,7 +74,7 @@ public class FormKeys {
 	}
 
 	private class ClickBinderListener implements MouseListener {
-		Main.EnumKeyAction binding;
+		final Main.EnumKeyAction binding;
 
 		ClickBinderListener(Main.EnumKeyAction action) {
 			this.binding = action;
