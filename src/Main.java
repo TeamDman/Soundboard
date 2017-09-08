@@ -27,6 +27,9 @@ public class Main {
 	private static java.util.HashMap<Integer, EnumKeyAction> keybindings = new HashMap<>();
 	private static EnumKeyAction toBind;
 
+	public static boolean isKeyShiftDown = false;
+	public static boolean isKeyControlDown = false;
+
 	public static void main(String[] args) {
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -156,6 +159,28 @@ public class Main {
 		}
 	}
 
+	public static float getGain() {
+		return gainMod;
+	}
+
+	public static void increaseGain() {
+		gainMod = Math.min(gainMod+0.02f,1);
+		window.updateVol();
+	}
+
+	public static void decreaseGain() {
+		gainMod = Math.max(gainMod-0.02f,0);
+		window.updateVol();
+	}
+
+	public static void soundNext() {
+		window.updateNext();
+	}
+
+	public static void soundPrev() {
+		window.updatePrev();
+	}
+
 	public static void setBinding(EnumKeyAction action) {
 		toBind=action;
 	}
@@ -166,7 +191,10 @@ public class Main {
 
 	private static class GlobalKeyListener implements NativeKeyListener {
 		public void nativeKeyPressed(NativeKeyEvent e) {
-			System.out.println("Keydown: " + NativeKeyEvent.getKeyText(e.getKeyCode()));
+			if (e.getKeyCode() == NativeKeyEvent.VC_CONTROL)
+				isKeyControlDown = true;
+			if (e.getKeyCode() == NativeKeyEvent.SHIFT_L_MASK)
+				isKeyShiftDown = true;
 			if (toBind != null) {
 				System.out.println("BINDING KEY");
 				keybindings.put(e.getRawCode(), toBind);
@@ -181,19 +209,26 @@ public class Main {
 		}
 
 		@Override
-		public void nativeKeyTyped(NativeKeyEvent nativeKeyEvent) {
+		public void nativeKeyTyped(NativeKeyEvent e) {
 
 		}
 
 		@Override
-		public void nativeKeyReleased(NativeKeyEvent nativeKeyEvent) {
-
+		public void nativeKeyReleased(NativeKeyEvent e) {
+			if (e.getKeyCode() == NativeKeyEvent.VC_CONTROL)
+				isKeyControlDown = false;
+			if (e.getKeyCode() == NativeKeyEvent.SHIFT_L_MASK)
+				isKeyShiftDown = false;
 		}
 	}
 
 	public static enum EnumKeyAction {
 		PLAY,
-		STOP;
+		STOP,
+		VOLUP,
+		VOLDOWN,
+		NEXT,
+		PREV;
 
 		private Runnable action;
 		private int key;
@@ -216,5 +251,9 @@ public class Main {
 	static {
 		EnumKeyAction.PLAY.setAction(()->Main.play(Main.window.getSelectedFiles()));
 		EnumKeyAction.STOP.setAction(Main::stop);
+		EnumKeyAction.VOLUP.setAction(Main::increaseGain);
+		EnumKeyAction.VOLDOWN.setAction(Main::decreaseGain);
+		EnumKeyAction.NEXT.setAction(Main::soundNext);
+		EnumKeyAction.PREV.setAction(Main::soundPrev);
 	}
 }
