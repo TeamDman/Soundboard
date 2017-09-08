@@ -1,6 +1,6 @@
 import javax.sound.sampled.*;
 
-public class MicManager {
+class MicManager {
 
 	public static class ThreadMic extends Thread {
 		public boolean running = true;

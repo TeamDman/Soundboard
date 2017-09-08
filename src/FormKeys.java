@@ -1,5 +1,3 @@
-import org.jnativehook.keyboard.NativeKeyEvent;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
@@ -7,7 +5,7 @@ import java.awt.event.MouseListener;
 import java.util.ArrayList;
 
 public class FormKeys {
-	public JFrame frame;
+	private JFrame frame;
 	private JButton btnPlay;
 	private JPanel panel;
 	private JButton btnDone;
@@ -21,7 +19,6 @@ public class FormKeys {
 
 	public FormKeys() {
 		frame = new JFrame("Keybindings");
-
 
 		new BindingButton(btnPlay, "Play", Main.EnumKeyAction.PLAY);
 		new BindingButton(btnStop, "Stop", Main.EnumKeyAction.STOP);
@@ -38,11 +35,8 @@ public class FormKeys {
 			}
 		});
 
-
 		updateButtons();
 
-//		frame.setDefaultLookAndFeelDecorated(true);
-////		frame.getRootPane().setWindowDecorationStyle(JRootPane.NONE);
 		frame.setContentPane(panel);
 		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		frame.pack();
@@ -66,7 +60,7 @@ public class FormKeys {
 		String name;
 		Main.EnumKeyAction action;
 
-		public BindingButton(JButton btn, String name, Main.EnumKeyAction action) {
+		BindingButton(JButton btn, String name, Main.EnumKeyAction action) {
 			this.btn = btn;
 			this.name = name;
 			this.action = action;
@@ -74,7 +68,7 @@ public class FormKeys {
 			btn.addMouseListener(new ClickBinderListener(action));
 		}
 
-		public void update() {
+		void update() {
 			btn.setText(name + " [" + action.getKeyName() + "]");
 		}
 	}
@@ -82,7 +76,7 @@ public class FormKeys {
 	private class ClickBinderListener implements MouseListener {
 		Main.EnumKeyAction binding;
 
-		public ClickBinderListener(Main.EnumKeyAction action) {
+		ClickBinderListener(Main.EnumKeyAction action) {
 			this.binding = action;
 		}
 
@@ -111,6 +105,5 @@ public class FormKeys {
 			Main.setBinding(binding);
 		}
 	}
-
 
 }

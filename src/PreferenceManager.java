@@ -3,8 +3,8 @@ import javax.sound.sampled.Mixer;
 import java.io.File;
 import java.util.prefs.Preferences;
 
-public class PreferenceManager {
-	private static Preferences prefs = Preferences.userNodeForPackage(Main.class);
+class PreferenceManager {
+	private static final Preferences prefs = Preferences.userNodeForPackage(Main.class);
 	public static void init() {
 		Main.startDir = new File(prefs.get("startdir","%userprofile%"));
 		for (Main.EnumKeyAction action : Main.EnumKeyAction.values())

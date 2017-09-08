@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FormMain {
-	public JFrame frame;
+	public final JFrame frame;
 	private JComboBox comboCable;
 	private JLabel lblStatus;
 	private JButton btnPlay;
@@ -20,14 +20,14 @@ public class FormMain {
 	private JTextField txtPath;
 	private JButton btnPicker;
 	private JButton btnRelay;
-	//	private JList<File> listSounds;
 	private JCheckBox chkParallel;
 	private JButton btnStop;
 	private JSlider sliderVol;
 	private JComboBox comboSpeakers;
 	private JTree treeSounds;
 	private JButton btnCfg;
-	private SoundTreeModel treeSoundModel;
+	private JCheckBox chkOnTop;
+	private final SoundTreeModel treeSoundModel;
 	private int debounce = 3;
 
 	public FormMain() {
@@ -77,6 +77,7 @@ public class FormMain {
 			}
 		});
 		chkParallel.addActionListener(e -> Main.allowParallelAudio = chkParallel.isSelected());
+		chkOnTop.addActionListener(e -> frame.setAlwaysOnTop(chkOnTop.isSelected()));
 
 		sliderVol.addChangeListener(e -> {
 			if (--debounce < 0)
@@ -95,7 +96,7 @@ public class FormMain {
 		treeSounds.setModel(treeSoundModel = new SoundTreeModel());
 		treeSounds.updateUI();
 
-
+		frame.setAlwaysOnTop(true);
 		frame.setContentPane(panel);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.pack();
@@ -139,52 +140,49 @@ public class FormMain {
 	}
 
 	public void updateCombos() {
-		debounce=2;
+		debounce = 2;
 		comboCable.setSelectedItem(Main.getInfoCable());
 		comboSpeakers.setSelectedItem(Main.getInfoSpeakers());
-		debounce=0;
+		debounce = 0;
 	}
 
 	public void updateNext() {
-		if (Main.isKeyControlDown) {
-			TreePath[] paths = SoundTreeModel.getNodes().stream()
-					.map(e -> new TreePath(treeSoundModel.getPathToRoot(e)))
-					.toArray(TreePath[]::new);
-			if (treeSounds.getSelectionPaths() == null || treeSounds.getSelectionPaths().length == 0) {
-				treeSounds.setSelectionPath(paths[0]);
-			}
-			TreePath[] selected = treeSounds.getSelectionPaths();
-			TreePath[] replace = new TreePath[selected.length];
-			for (int i = 0; i < selected.length; i++) {
-				for (int v = 0; v < paths.length; v++) {
-					if (selected[i].equals(paths[v]) && v + 1 < paths.length)
-						replace[i] = paths[v + 1];
-				}
-			}
-			treeSounds.setSelectionPaths(replace);
-			SwingUtilities.invokeLater(() -> treeSounds.scrollPathToVisible(replace[0]));
+		TreePath[] paths = SoundTreeModel.getNodes().stream()
+				.map(e -> new TreePath(treeSoundModel.getPathToRoot(e)))
+				.toArray(TreePath[]::new);
+		if (treeSounds.getSelectionPaths() == null || treeSounds.getSelectionPaths().length == 0) {
+			treeSounds.setSelectionPath(paths[0]);
 		}
+		TreePath[] selected = treeSounds.getSelectionPaths();
+		TreePath[] replace = new TreePath[selected.length];
+		for (int i = 0; i < selected.length; i++) {
+			for (int v = 0; v < paths.length; v++) {
+				if (selected[i].equals(paths[v]) && v + 1 < paths.length)
+					replace[i] = paths[v + 1];
+			}
+		}
+		treeSounds.setSelectionPaths(replace);
+		SwingUtilities.invokeLater(() -> treeSounds.scrollPathToVisible(replace[0]));
+
 	}
 
 	public void updatePrev() {
-		if (Main.isKeyControlDown) {
-			TreePath[] paths = SoundTreeModel.getNodes().stream()
-					.map(e -> new TreePath(treeSoundModel.getPathToRoot(e)))
-					.toArray(TreePath[]::new);
-			if (treeSounds.getSelectionPaths() == null || treeSounds.getSelectionPaths().length == 0) {
-				treeSounds.setSelectionPath(paths[0]);
-			}
-			TreePath[] selected = treeSounds.getSelectionPaths();
-			TreePath[] replace = new TreePath[selected.length];
-			for (int i = 0; i < selected.length; i++) {
-				for (int v = 0; v < paths.length; v++) {
-					if (selected[i].equals(paths[v]) && v > 0)
-						replace[i] = paths[v - 1];
-				}
-			}
-			treeSounds.setSelectionPaths(replace);
-			SwingUtilities.invokeLater(() -> treeSounds.scrollPathToVisible(replace[0]));
+		TreePath[] paths = SoundTreeModel.getNodes().stream()
+				.map(e -> new TreePath(treeSoundModel.getPathToRoot(e)))
+				.toArray(TreePath[]::new);
+		if (treeSounds.getSelectionPaths() == null || treeSounds.getSelectionPaths().length == 0) {
+			treeSounds.setSelectionPath(paths[0]);
 		}
+		TreePath[] selected = treeSounds.getSelectionPaths();
+		TreePath[] replace = new TreePath[selected.length];
+		for (int i = 0; i < selected.length; i++) {
+			for (int v = 0; v < paths.length; v++) {
+				if (selected[i].equals(paths[v]) && v > 0)
+					replace[i] = paths[v - 1];
+			}
+		}
+		treeSounds.setSelectionPaths(replace);
+		SwingUtilities.invokeLater(() -> treeSounds.scrollPathToVisible(replace[0]));
 	}
 
 	public List<File> getSelectedFiles() {
@@ -193,7 +191,6 @@ public class FormMain {
 			DefaultMutableTreeNode selected = (DefaultMutableTreeNode) path.getLastPathComponent();
 			rtn.add((File) selected.getUserObject());
 		}
-
 		return rtn;
 	}
 
@@ -225,29 +222,28 @@ public class FormMain {
 	}
 
 	private static class SoundTreeModel extends DefaultTreeModel {
-		private static DefaultMutableTreeNode root = new DefaultMutableTreeNode("Sounds");
-		private static ArrayList<DefaultMutableTreeNode> nodes = new ArrayList<>();
+		private static final DefaultMutableTreeNode root = new DefaultMutableTreeNode("Sounds");
+		private static final ArrayList<DefaultMutableTreeNode> nodes = new ArrayList<>();
 
-		public SoundTreeModel() {
+		SoundTreeModel() {
 			super(root);
 		}
 
-		public static void rebuild(File[] files) {
+		static void rebuild(File[] files) {
 			root.removeAllChildren();
 			nodes.clear();
 			for (File f : files) {
 				DefaultMutableTreeNode node = new DefaultMutableTreeNode(f);
 				nodes.add(node);
 				root.add(node);
-
 			}
 		}
 
-		public static ArrayList<DefaultMutableTreeNode> getNodes() {
+		static ArrayList<DefaultMutableTreeNode> getNodes() {
 			return nodes;
 		}
 
-		public static DefaultMutableTreeNode getRootNode() {
+		static DefaultMutableTreeNode getRootNode() {
 			return root;
 		}
 	}

@@ -4,9 +4,11 @@ import org.jnativehook.keyboard.NativeKeyListener;
 
 import javax.sound.sampled.*;
 import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
@@ -14,19 +16,19 @@ import java.util.logging.Logger;
 
 public class Main {
 	public static Mixer.Info infoCable;
-	public static Mixer.Info infoSpeakers;
+	private static Mixer.Info infoSpeakers;
 	public static boolean allowParallelAudio = true;
 	public static File startDir;
 	public static FormMain window;
 	public static FormKeys windowKeys;
-	public static boolean isKeyShiftDown = false;
-	public static boolean isKeyControlDown = false;
-	private static ArrayList<File> sounds = new ArrayList<>();
-	private static ArrayList<Clip> playingClips = new ArrayList<>();
+	private static boolean isKeyShiftDown = false;
+	private static boolean isKeyControlDown = false;
+	private static final ArrayList<File> sounds = new ArrayList<>();
+	private static final ArrayList<Clip> playingClips = new ArrayList<>();
 	private static MicManager.ThreadMic threadMic;
 	private static float gainMod = 1.0f;
-	private static ArrayList<FloatControl> gains = new ArrayList<>();
-	private static java.util.HashMap<Integer, EnumKeyAction> keybindings = new HashMap<>();
+	private static final ArrayList<FloatControl> gains = new ArrayList<>();
+	private static final java.util.HashMap<Integer, EnumKeyAction> keybindings = new HashMap<>();
 	private static EnumKeyAction toBind;
 
 	static {
@@ -51,12 +53,14 @@ public class Main {
 		Logger.getLogger(GlobalScreen.class.getPackage().getName()).setLevel(Level.OFF);
 		PreferenceManager.init();
 
-		window = new FormMain();
-		window.updateFromDir(startDir);
+		EventQueue.invokeLater(()->{
+			window = new FormMain();
+			window.updateFromDir(startDir);
+		});
 
 	}
 
-	public static void play(List<File> listFiles) {
+	static void play(List<File> listFiles) {
 		new Thread(() -> {
 			for (File file : listFiles) {
 				if (file == null || !file.exists()) {
@@ -79,9 +83,6 @@ public class Main {
 						AudioInputStream streama = AudioSystem.getAudioInputStream(file);
 						AudioFormat formata = new AudioFormat(44100, 16, 2, true, true);
 						playClip(AudioSystem.getAudioInputStream(formata, streama), infoCable, file.getName());
-
-						//lol why do I need to copypaste this for it to work instead of sharing the original audioinputstream ;-;
-
 
 						//				AudioFormat formatBase = stream.getFormat();
 						//				AudioFormat format = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
@@ -126,16 +127,12 @@ public class Main {
 		}
 	}
 
-	private static void playClip(AudioInputStream stream, Mixer.Info info, String name) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
+	private static void playClip(AudioInputStream stream, Mixer.Info info, String name) throws LineUnavailableException, IOException {
 		Clip clip = AudioSystem.getClip(info);
 		clip.addLineListener(e -> {
 			LineEvent.Type t = e.getType();
 			if (t == LineEvent.Type.START) {
 				window.setStatus("Playing: " + name);
-			} else if (t == LineEvent.Type.STOP) {
-				//				playingClips.remove(clip);
-				//				if (playingClips.size() == 0)
-				//					window.setStatus("Stopped");
 			}
 		});
 		clip.open(stream);
@@ -148,9 +145,7 @@ public class Main {
 	}
 
 	public static void addFiles(File[] f) {
-		for (File file : f) {
-			sounds.add(file);
-		}
+		Collections.addAll(sounds, f);
 	}
 
 	public static Mixer.Info getInfoCable() {
@@ -197,21 +192,21 @@ public class Main {
 		gainMod = v;
 	}
 
-	public static void increaseGain() {
+	private static void increaseGain() {
 		gainMod = Math.min(gainMod + 0.02f, 1);
 		window.updateVol();
 	}
 
-	public static void decreaseGain() {
+	private static void decreaseGain() {
 		gainMod = Math.max(gainMod - 0.02f, 0);
 		window.updateVol();
 	}
 
-	public static void soundNext() {
+	private static void soundNext() {
 		window.updateNext();
 	}
 
-	public static void soundPrev() {
+	private static void soundPrev() {
 		window.updatePrev();
 	}
 
@@ -242,15 +237,15 @@ public class Main {
 		private int key = 0;
 		private String keyName = "undefined";
 
-		public Runnable getAction() {
+		Runnable getAction() {
 			return action;
 		}
 
-		public void setAction(Runnable action) {
+		void setAction(Runnable action) {
 			this.action = action;
 		}
 
-		public void setKey(int key, String keyName) {
+		void setKey(int key, String keyName) {
 			this.key = key;
 			this.keyName = keyName;
 		}
@@ -283,9 +278,7 @@ public class Main {
 		}
 
 		@Override
-		public void nativeKeyTyped(NativeKeyEvent e) {
-
-		}
+		public void nativeKeyTyped(NativeKeyEvent e) {}
 
 		@Override
 		public void nativeKeyReleased(NativeKeyEvent e) {
