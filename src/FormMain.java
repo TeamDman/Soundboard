@@ -10,23 +10,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FormMain {
-	public final JFrame frame;
-	private final SoundTreeModel treeSoundModel;
-	private JButton btnCfg;
-	private JButton btnPicker;
-	private JButton btnPlay;
-	private JButton btnRelay;
-	private JButton btnStop;
-	private JCheckBox chkAutoRelay;
-	private JCheckBox chkOnTop;
-	private JCheckBox chkParallel;
-	private JComboBox<Mixer.Info> comboCable;
-	private JComboBox<Mixer.Info> comboSpeakers;
+	public final  JFrame                frame;
+	private final SoundTreeModel        treeSoundModel;
+	private       JButton               btnCfg;
+	private       JButton               btnPicker;
+	private       JButton               btnPlay;
+	private       JButton               btnRelay;
+	private       JButton               btnStop;
+	private       JCheckBox             chkAutoRelay;
+	private       JCheckBox             chkOnTop;
+	private       JCheckBox             chkParallel;
+	private       JComboBox<Mixer.Info> comboCable;
+	private       JComboBox<Mixer.Info> comboSpeakers;
 	private int debounce = 3;
-	private JLabel lblStatus;
-	private JPanel panel;
-	private JSlider sliderVol;
-	private JTree treeSounds;
+	private JLabel     lblStatus;
+	private JPanel     panel;
+	private JSlider    sliderVol;
+	private JTree      treeSounds;
 	private JTextField txtPath;
 
 	public FormMain() {
@@ -57,7 +57,7 @@ public class FormMain {
 		btnRelay.addMouseListener(new ClickListener() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				toggleRelay();
+				updateRelay();
 			}
 		});
 		btnPicker.addMouseListener(new ClickListener() {
@@ -97,7 +97,7 @@ public class FormMain {
 		treeSounds.updateUI();
 
 		if (PreferenceManager.autoRelay) {
-			toggleRelay();
+			updateRelay();
 		}
 
 		chkOnTop.setSelected(PreferenceManager.alwaysOnTop);
@@ -119,12 +119,6 @@ public class FormMain {
 		frame.setVisible(true);
 	}
 
-	void toggleRelay() {
-		Main.toggleRelay();
-		btnRelay.setText("Relay " + (Main.isRelaying() ? "stop" : "start"));
-		comboCable.setEnabled(!Main.isRelaying());
-	}
-
 	private void pick() {
 		JFileChooser chooser = new JFileChooser();
 		chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -138,10 +132,10 @@ public class FormMain {
 
 	void updateFromDir(File dir) {
 		if (dir == null || !dir.exists()) {
-			setStatus("Directory contains no files!");
+			updateStatus("Directory contains no files!");
 			return;
 		}
-		//		Main.addFiles(dir.listFiles());
+		Main.addFiles(dir.listFiles());
 
 		SwingUtilities.invokeLater(() -> {
 			SoundTreeModel.rebuild(dir.listFiles());
@@ -151,9 +145,22 @@ public class FormMain {
 		});
 	}
 
-	void setStatus(String txt) {
+	void updateStatus(String txt) {
 		System.out.println(txt);
 		lblStatus.setText(txt);
+	}
+
+	void updateCombos() {
+		debounce = 2;
+		comboCable.setSelectedItem(Main.getInfoCable());
+		comboSpeakers.setSelectedItem(Main.getInfoSpeakers());
+		debounce = 0;
+	}
+
+	void updateRelay() {
+		Main.toggleRelay();
+		btnRelay.setText("Relay " + (Main.isRelaying() ? "stop" : "start"));
+		comboCable.setEnabled(!Main.isRelaying());
 	}
 
 	List<File> getSelectedFiles() {
@@ -163,13 +170,6 @@ public class FormMain {
 			rtn.add((File) selected.getUserObject());
 		}
 		return rtn;
-	}
-
-	void updateCombos() {
-		debounce = 2;
-		comboCable.setSelectedItem(Main.getInfoCable());
-		comboSpeakers.setSelectedItem(Main.getInfoSpeakers());
-		debounce = 0;
 	}
 
 	int getHeight() {
@@ -196,7 +196,7 @@ public class FormMain {
 			treeSounds.setSelectionPath(paths[0]);
 		}
 		TreePath[] selected = treeSounds.getSelectionPaths();
-		TreePath[] replace = new TreePath[selected.length];
+		TreePath[] replace  = new TreePath[selected.length];
 		for (int i = 0; i < selected.length; i++) {
 			for (int v = 0; v < paths.length; v++) {
 				if (selected[i].equals(paths[v]) && v + 1 < paths.length)
@@ -216,7 +216,7 @@ public class FormMain {
 			treeSounds.setSelectionPath(paths[0]);
 		}
 		TreePath[] selected = treeSounds.getSelectionPaths();
-		TreePath[] replace = new TreePath[selected.length];
+		TreePath[] replace  = new TreePath[selected.length];
 		for (int i = 0; i < selected.length; i++) {
 			for (int v = 0; v < paths.length; v++) {
 				if (selected[i].equals(paths[v]) && v > 0)
@@ -255,7 +255,7 @@ public class FormMain {
 
 	private static class SoundTreeModel extends DefaultTreeModel {
 		private static final ArrayList<DefaultMutableTreeNode> nodes = new ArrayList<>();
-		private static final DefaultMutableTreeNode root = new DefaultMutableTreeNode("Sounds");
+		private static final DefaultMutableTreeNode            root  = new DefaultMutableTreeNode("Sounds");
 
 		SoundTreeModel() {
 			super(root);

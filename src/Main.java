@@ -15,19 +15,19 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
-	private static final ArrayList<FloatControl> gains = new ArrayList<>();
-	private static final java.util.HashMap<Integer, EnumKeyAction> keybindings = new HashMap<>();
-//	private static final ArrayList<File> sounds = new ArrayList<>();
-	private static final ArrayList<Clip> playingClips = new ArrayList<>();
-	public static boolean allowParallelAudio = true;
-	public static Mixer.Info infoCable;
-	public static File startDir;
-	public static FormMain window;
-	public static FormKeys windowKeys;
+	private static final ArrayList<FloatControl>                   gains              = new ArrayList<>();
+	private static final java.util.HashMap<Integer, EnumKeyAction> keybindings        = new HashMap<>();
+	private static final ArrayList<Clip>                           playingClips       = new ArrayList<>();
+	private static final ArrayList<File>                           sounds             = new ArrayList<>();
+	static               boolean                                   allowParallelAudio = true;
+	static Mixer.Info infoCable;
+	static File       startDir;
+	static FormMain   window;
+	static FormKeys   windowKeys;
 	private static float gainMod = 1.0f;
-	private static Mixer.Info infoSpeakers;
+	private static Mixer.Info           infoSpeakers;
 	private static MicManager.ThreadMic threadMic;
-	private static EnumKeyAction toBind;
+	private static EnumKeyAction        toBind;
 
 	static {
 		EnumKeyAction.PLAY.setAction(() -> Main.play(Main.window.getSelectedFiles()));
@@ -36,65 +36,7 @@ public class Main {
 		EnumKeyAction.VOLDOWN.setAction(Main::decreaseGain);
 		EnumKeyAction.NEXT.setAction(Main::soundNext);
 		EnumKeyAction.PREV.setAction(Main::soundPrev);
-		EnumKeyAction.RELAY.setAction(() -> window.toggleRelay());
-	}
-
-	private static void decreaseGain() {
-		gainMod = Math.max(gainMod - 0.02f, 0);
-		window.updateVol();
-	}
-
-	public static float getGain() {
-		return gainMod;
-	}
-
-	public static void setGain(float v) {
-		gainMod = v;
-		PreferenceManager.save();
-		for (FloatControl gain : gains) {
-			gain.setValue(((gain.getMaximum() - gain.getMinimum()) * gainMod) + gain.getMinimum());
-		}
-	}
-
-	public static Mixer.Info getInfoCable() {
-		return infoCable;
-	}
-
-//	public static void addFiles(File[] f) {
-//		Collections.addAll(sounds, f);
-//	}
-
-	public static void setInfoCable(Mixer.Info info) {
-		boolean update = infoCable != null;
-		infoCable = info;
-
-		if (update)
-			PreferenceManager.save();
-		if (window != null)
-			window.updateCombos();
-	}
-
-	public static Mixer.Info getInfoSpeakers() {
-		return infoSpeakers;
-	}
-
-	public static void setInfoSpeakers(Mixer.Info info) {
-		boolean update = infoCable != null;
-		infoSpeakers = info;
-
-		if (update)
-			PreferenceManager.save();
-		if (window != null)
-			window.updateCombos();
-	}
-
-	private static void increaseGain() {
-		gainMod = Math.min(gainMod + 0.02f, 1);
-		window.updateVol();
-	}
-
-	public static boolean isRelaying() {
-		return threadMic != null;
+		EnumKeyAction.RELAY.setAction(() -> window.updateRelay());
 	}
 
 	public static void main(String[] args) {
@@ -120,7 +62,7 @@ public class Main {
 		new Thread(() -> {
 			for (File file : listFiles) {
 				if (file == null || !file.exists()) {
-					window.setStatus("No sound selected");
+					window.updateStatus("No sound selected");
 					return;
 				}
 				if (!allowParallelAudio) {
@@ -133,11 +75,11 @@ public class Main {
 					} else {
 						System.out.println("Not WAV, converting and playing");
 						AudioInputStream stream = AudioSystem.getAudioInputStream(file);
-						AudioFormat format = new AudioFormat(44100, 16, 2, true, true);
+						AudioFormat      format = new AudioFormat(44100, 16, 2, true, true);
 						playClip(AudioSystem.getAudioInputStream(format, stream), infoSpeakers, file.getName());
 
 						AudioInputStream streama = AudioSystem.getAudioInputStream(file);
-						AudioFormat formata = new AudioFormat(44100, 16, 2, true, true);
+						AudioFormat      formata = new AudioFormat(44100, 16, 2, true, true);
 						playClip(AudioSystem.getAudioInputStream(formata, streama), infoCable, file.getName());
 
 						//				AudioFormat formatBase = stream.getFormat();
@@ -152,13 +94,13 @@ public class Main {
 				} catch (Exception e) {
 					System.out.println("Exception occurred");
 					e.printStackTrace();
-					window.setStatus(e.getLocalizedMessage());
+					window.updateStatus(e.getLocalizedMessage());
 				}
 			}
 		}).start();
 	}
 
-	public static void stop() {
+	static void stop() {
 		for (Clip clip : playingClips) {
 			clip.stop();
 		}
@@ -171,7 +113,7 @@ public class Main {
 		clip.addLineListener(e -> {
 			LineEvent.Type t = e.getType();
 			if (t == LineEvent.Type.START) {
-				window.setStatus("Playing: " + name);
+				window.updateStatus("Playing: " + name);
 			}
 		});
 		clip.open(stream);
@@ -183,19 +125,86 @@ public class Main {
 		playingClips.add(clip);
 	}
 
-	public static void setBinding(EnumKeyAction action) {
+	static void addFiles(File[] f) {
+		Collections.addAll(sounds, f);
+	}
+
+
+	static boolean isRelaying() {
+		return threadMic != null;
+	}
+
+	static Mixer.Info getInfoCable() {
+		return infoCable;
+	}
+
+	static void setInfoCable(Mixer.Info info) {
+		boolean update = infoCable != null;
+		infoCable = info;
+
+		if (update)
+			PreferenceManager.save();
+		if (window != null)
+			window.updateCombos();
+	}
+
+	static Mixer.Info getInfoSpeakers() {
+		return infoSpeakers;
+	}
+
+	static void setInfoSpeakers(Mixer.Info info) {
+		boolean update = infoCable != null;
+		infoSpeakers = info;
+
+		if (update)
+			PreferenceManager.save();
+		if (window != null)
+			window.updateCombos();
+	}
+
+	static void setBinding(EnumKeyAction action) {
 		toBind = action;
 	}
 
-	public static void setBinding(EnumKeyAction action, int key, String keyName) {
+	static void setBinding(EnumKeyAction action, int key, String keyName) {
 		keybindings.put(key, action);
 		action.setKey(key, keyName);
 		toBind = null;
 	}
 
-	public static void setGain(float v, boolean b) {
+	static float getGain() {
+		return gainMod;
+	}
+
+	static void setGain(float v) {
+		gainMod = v;
+		PreferenceManager.save();
+		for (FloatControl gain : gains) {
+			gain.setValue(((gain.getMaximum() - gain.getMinimum()) * gainMod) + gain.getMinimum());
+		}
+	}
+
+	static void setGain(float v, boolean preventPrefSave) {
 		gainMod = v;
 	}
+
+	static void toggleRelay() {
+		if (threadMic != null) {
+			try {
+				threadMic.running = false;
+				threadMic.join();
+				threadMic = null;
+			} catch (Exception e) {
+				System.out.println("Exception relaying mic");
+				e.printStackTrace();
+				window.updateStatus(e.getLocalizedMessage());
+			}
+		} else {
+			threadMic = new MicManager.ThreadMic();
+			threadMic.start();
+		}
+	}
+
 
 	private static void soundNext() {
 		window.updateNext();
@@ -205,25 +214,18 @@ public class Main {
 		window.updatePrev();
 	}
 
-	public static void toggleRelay() {
-		if (threadMic != null) {
-			try {
-				threadMic.running = false;
-				threadMic.join();
-				threadMic = null;
-			} catch (Exception e) {
-				System.out.println("Exception relaying mic");
-				e.printStackTrace();
-				window.setStatus(e.getLocalizedMessage());
-			}
-		} else {
-			threadMic = new MicManager.ThreadMic();
-			threadMic.start();
-		}
+	private static void increaseGain() {
+		gainMod = Math.min(gainMod + 0.02f, 1);
+		window.updateVol();
+	}
+
+	private static void decreaseGain() {
+		gainMod = Math.max(gainMod - 0.02f, 0);
+		window.updateVol();
 	}
 
 
-	public enum EnumKeyAction {
+	enum EnumKeyAction {
 		PLAY,
 		STOP,
 		VOLUP,
@@ -233,7 +235,7 @@ public class Main {
 		RELAY;
 
 		private Runnable action;
-		private int key = 0;
+		private int    key     = 0;
 		private String keyName = "undefined";
 
 		Runnable getAction() {

@@ -6,16 +6,16 @@ import java.util.ArrayList;
 
 public class FormKeys {
 	private final ArrayList<BindingButton> buttons = new ArrayList<>();
-	private final JFrame frame;
-	private JButton btnDone;
-	private JButton btnNext;
-	private JButton btnPlay;
-	private JButton btnPrev;
-	private JButton btnRelay;
-	private JButton btnStop;
-	private JButton btnVolDown;
-	private JButton btnVolUp;
-	private JPanel panel;
+	private final JFrame  frame;
+	private       JButton btnDone;
+	private       JButton btnNext;
+	private       JButton btnPlay;
+	private       JButton btnPrev;
+	private       JButton btnRelay;
+	private       JButton btnStop;
+	private       JButton btnVolDown;
+	private       JButton btnVolUp;
+	private       JPanel  panel;
 
 	public FormKeys() {
 		if (Main.windowKeys != null) {
@@ -60,8 +60,8 @@ public class FormKeys {
 
 	private class BindingButton {
 		final Main.EnumKeyAction action;
-		final JButton btn;
-		final String name;
+		final JButton            btn;
+		final String             name;
 
 		BindingButton(JButton btn, String name, Main.EnumKeyAction action) {
 			this.btn = btn;
