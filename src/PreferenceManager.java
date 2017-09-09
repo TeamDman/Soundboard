@@ -8,12 +8,17 @@ class PreferenceManager {
 	private static final Preferences prefs = Preferences.userNodeForPackage(Main.class);
 	static boolean alwaysOnTop;
 	static boolean autoRelay;
+	static int windowX, windowY, windowW, windowH;
 
 	public static void init() {
 		Main.startDir = new File(prefs.get("startdir", "%userprofile%"));
 		Main.setGain(prefs.getFloat("gain", 1f), true);
 		autoRelay = prefs.getBoolean("autorelay", false);
 		alwaysOnTop=prefs.getBoolean("alwaysontop",false);
+		windowX = prefs.getInt("windowx",0);
+		windowY = prefs.getInt("windowy",0);
+		windowW = prefs.getInt("windoww",-1);
+		windowH = prefs.getInt("windowh",-1);
 		for (Main.EnumKeyAction action : Main.EnumKeyAction.values())
 			Main.setBinding(action, prefs.getInt(action.name() + "key", -1), prefs.get(action.name() + "keyName", "undefined"));
 
@@ -46,7 +51,12 @@ class PreferenceManager {
 			prefs.put(action.name() + "keyName", action.getKeyName());
 		}
 
-		if (Main.window != null)
+		if (Main.window != null){
+			prefs.putInt("windowx",Main.window.getX());
+			prefs.putInt("windowy",Main.window.getY());
+			prefs.putInt("windoww",Main.window.getWidth());
+			prefs.putInt("windowh",Main.window.getHeight());
 			Main.window.setStatus("Prefs saved");
+		}
 	}
 }

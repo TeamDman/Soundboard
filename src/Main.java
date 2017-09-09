@@ -15,18 +15,18 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
-//	private static final ArrayList<File> sounds = new ArrayList<>();
-	private static final ArrayList<Clip> playingClips = new ArrayList<>();
 	private static final ArrayList<FloatControl> gains = new ArrayList<>();
 	private static final java.util.HashMap<Integer, EnumKeyAction> keybindings = new HashMap<>();
-	public static Mixer.Info infoCable;
+//	private static final ArrayList<File> sounds = new ArrayList<>();
+	private static final ArrayList<Clip> playingClips = new ArrayList<>();
 	public static boolean allowParallelAudio = true;
+	public static Mixer.Info infoCable;
 	public static File startDir;
 	public static FormMain window;
 	public static FormKeys windowKeys;
+	private static float gainMod = 1.0f;
 	private static Mixer.Info infoSpeakers;
 	private static MicManager.ThreadMic threadMic;
-	private static float gainMod = 1.0f;
 	private static EnumKeyAction toBind;
 
 	static {
@@ -37,6 +37,64 @@ public class Main {
 		EnumKeyAction.NEXT.setAction(Main::soundNext);
 		EnumKeyAction.PREV.setAction(Main::soundPrev);
 		EnumKeyAction.RELAY.setAction(() -> window.toggleRelay());
+	}
+
+	private static void decreaseGain() {
+		gainMod = Math.max(gainMod - 0.02f, 0);
+		window.updateVol();
+	}
+
+	public static float getGain() {
+		return gainMod;
+	}
+
+	public static void setGain(float v) {
+		gainMod = v;
+		PreferenceManager.save();
+		for (FloatControl gain : gains) {
+			gain.setValue(((gain.getMaximum() - gain.getMinimum()) * gainMod) + gain.getMinimum());
+		}
+	}
+
+	public static Mixer.Info getInfoCable() {
+		return infoCable;
+	}
+
+//	public static void addFiles(File[] f) {
+//		Collections.addAll(sounds, f);
+//	}
+
+	public static void setInfoCable(Mixer.Info info) {
+		boolean update = infoCable != null;
+		infoCable = info;
+
+		if (update)
+			PreferenceManager.save();
+		if (window != null)
+			window.updateCombos();
+	}
+
+	public static Mixer.Info getInfoSpeakers() {
+		return infoSpeakers;
+	}
+
+	public static void setInfoSpeakers(Mixer.Info info) {
+		boolean update = infoCable != null;
+		infoSpeakers = info;
+
+		if (update)
+			PreferenceManager.save();
+		if (window != null)
+			window.updateCombos();
+	}
+
+	private static void increaseGain() {
+		gainMod = Math.min(gainMod + 0.02f, 1);
+		window.updateVol();
+	}
+
+	public static boolean isRelaying() {
+		return threadMic != null;
 	}
 
 	public static void main(String[] args) {
@@ -125,9 +183,27 @@ public class Main {
 		playingClips.add(clip);
 	}
 
-//	public static void addFiles(File[] f) {
-//		Collections.addAll(sounds, f);
-//	}
+	public static void setBinding(EnumKeyAction action) {
+		toBind = action;
+	}
+
+	public static void setBinding(EnumKeyAction action, int key, String keyName) {
+		keybindings.put(key, action);
+		action.setKey(key, keyName);
+		toBind = null;
+	}
+
+	public static void setGain(float v, boolean b) {
+		gainMod = v;
+	}
+
+	private static void soundNext() {
+		window.updateNext();
+	}
+
+	private static void soundPrev() {
+		window.updatePrev();
+	}
 
 	public static void toggleRelay() {
 		if (threadMic != null) {
@@ -144,85 +220,6 @@ public class Main {
 			threadMic = new MicManager.ThreadMic();
 			threadMic.start();
 		}
-	}
-
-
-	public static Mixer.Info getInfoCable() {
-		return infoCable;
-	}
-
-	public static void setInfoCable(Mixer.Info info) {
-		boolean update = infoCable != null;
-		infoCable = info;
-
-		if (update)
-			PreferenceManager.save();
-		if (window != null)
-			window.updateCombos();
-	}
-
-	public static Mixer.Info getInfoSpeakers() {
-		return infoSpeakers;
-	}
-
-	public static void setInfoSpeakers(Mixer.Info info) {
-		boolean update = infoCable != null;
-		infoSpeakers = info;
-
-		if (update)
-			PreferenceManager.save();
-		if (window != null)
-			window.updateCombos();
-	}
-
-	public static float getGain() {
-		return gainMod;
-	}
-
-	public static void setGain(float v) {
-		gainMod = v;
-		PreferenceManager.save();
-		for (FloatControl gain : gains) {
-			gain.setValue(((gain.getMaximum() - gain.getMinimum()) * gainMod) + gain.getMinimum());
-		}
-	}
-
-	public static void setGain(float v, boolean b) {
-		gainMod = v;
-	}
-
-
-	private static void increaseGain() {
-		gainMod = Math.min(gainMod + 0.02f, 1);
-		window.updateVol();
-	}
-
-	private static void decreaseGain() {
-		gainMod = Math.max(gainMod - 0.02f, 0);
-		window.updateVol();
-	}
-
-	private static void soundNext() {
-		window.updateNext();
-	}
-
-	private static void soundPrev() {
-		window.updatePrev();
-	}
-
-
-	public static void setBinding(EnumKeyAction action) {
-		toBind = action;
-	}
-
-	public static void setBinding(EnumKeyAction action, int key, String keyName) {
-		keybindings.put(key, action);
-		action.setKey(key, keyName);
-		toBind = null;
-	}
-
-	public static boolean isRelaying() {
-		return threadMic != null;
 	}
 
 
@@ -247,17 +244,17 @@ public class Main {
 			this.action = action;
 		}
 
-		void setKey(int key, String keyName) {
-			this.key = key;
-			this.keyName = keyName;
-		}
-
 		public int getKey() {
 			return key;
 		}
 
 		public String getKeyName() {
 			return keyName;
+		}
+
+		void setKey(int key, String keyName) {
+			this.key = key;
+			this.keyName = keyName;
 		}
 	}
 

@@ -5,19 +5,22 @@ import java.awt.event.MouseListener;
 import java.util.ArrayList;
 
 public class FormKeys {
+	private final ArrayList<BindingButton> buttons = new ArrayList<>();
 	private final JFrame frame;
-	private JButton btnPlay;
-	private JPanel panel;
 	private JButton btnDone;
-	private JButton btnStop;
-	private JButton btnVolUp;
-	private JButton btnVolDown;
 	private JButton btnNext;
+	private JButton btnPlay;
 	private JButton btnPrev;
 	private JButton btnRelay;
-	private final ArrayList<BindingButton> buttons = new ArrayList<>();
+	private JButton btnStop;
+	private JButton btnVolDown;
+	private JButton btnVolUp;
+	private JPanel panel;
 
 	public FormKeys() {
+		if (Main.windowKeys != null) {
+			Main.windowKeys.close();
+		}
 		frame = new JFrame("Keybindings");
 
 		new BindingButton(btnPlay, "Play", Main.EnumKeyAction.PLAY);
@@ -56,9 +59,9 @@ public class FormKeys {
 	}
 
 	private class BindingButton {
+		final Main.EnumKeyAction action;
 		final JButton btn;
 		final String name;
-		final Main.EnumKeyAction action;
 
 		BindingButton(JButton btn, String name, Main.EnumKeyAction action) {
 			this.btn = btn;

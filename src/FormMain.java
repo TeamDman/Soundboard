@@ -4,9 +4,7 @@ import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
-import java.awt.event.ItemEvent;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
+import java.awt.event.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,22 +12,22 @@ import java.util.List;
 public class FormMain {
 	public final JFrame frame;
 	private final SoundTreeModel treeSoundModel;
-	private JComboBox comboCable;
-	private JLabel lblStatus;
-	private JButton btnPlay;
-	private JPanel panel;
-	private JTextField txtPath;
-	private JButton btnPicker;
-	private JButton btnRelay;
-	private JCheckBox chkParallel;
-	private JButton btnStop;
-	private JSlider sliderVol;
-	private JComboBox comboSpeakers;
-	private JTree treeSounds;
 	private JButton btnCfg;
-	private JCheckBox chkOnTop;
+	private JButton btnPicker;
+	private JButton btnPlay;
+	private JButton btnRelay;
+	private JButton btnStop;
 	private JCheckBox chkAutoRelay;
+	private JCheckBox chkOnTop;
+	private JCheckBox chkParallel;
+	private JComboBox<Mixer.Info> comboCable;
+	private JComboBox<Mixer.Info> comboSpeakers;
 	private int debounce = 3;
+	private JLabel lblStatus;
+	private JPanel panel;
+	private JSlider sliderVol;
+	private JTree treeSounds;
+	private JTextField txtPath;
 
 	public FormMain() {
 		frame = new JFrame("Soundboard");
@@ -71,9 +69,6 @@ public class FormMain {
 		btnCfg.addMouseListener(new ClickListener() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				if (Main.windowKeys != null) {
-					Main.windowKeys.close();
-				}
 				Main.windowKeys = new FormKeys();
 			}
 		});
@@ -90,8 +85,7 @@ public class FormMain {
 				Main.setGain(sliderVol.getValue() / 100.0f);
 		});
 
-		Mixer.Info[] infos = AudioSystem.getMixerInfo();
-		for (Mixer.Info v : infos) {
+		for (Mixer.Info v : AudioSystem.getMixerInfo()) {
 			comboCable.addItem(v);
 			comboSpeakers.addItem(v);
 		}
@@ -109,10 +103,19 @@ public class FormMain {
 		chkOnTop.setSelected(PreferenceManager.alwaysOnTop);
 		chkAutoRelay.setSelected(PreferenceManager.autoRelay);
 
+		frame.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e) {
+				PreferenceManager.save();
+			}
+		});
 		frame.setContentPane(panel);
+		frame.setLocation(PreferenceManager.windowX, PreferenceManager.windowY);
 		//noinspection MagicConstant
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.pack();
+		if (PreferenceManager.windowW != -1 && PreferenceManager.windowW != -1)
+			frame.setSize(PreferenceManager.windowW, PreferenceManager.windowH);
 		frame.setVisible(true);
 	}
 
@@ -138,7 +141,7 @@ public class FormMain {
 			setStatus("Directory contains no files!");
 			return;
 		}
-//		Main.addFiles(dir.listFiles());
+		//		Main.addFiles(dir.listFiles());
 
 		SwingUtilities.invokeLater(() -> {
 			SoundTreeModel.rebuild(dir.listFiles());
@@ -169,8 +172,20 @@ public class FormMain {
 		debounce = 0;
 	}
 
-	void updateVol() {
-		sliderVol.setValue((int) (Main.getGain() * 100));
+	int getHeight() {
+		return frame.getHeight();
+	}
+
+	int getWidth() {
+		return frame.getWidth();
+	}
+
+	int getX() {
+		return frame.getX();
+	}
+
+	int getY() {
+		return frame.getY();
 	}
 
 	void updateNext() {
@@ -212,6 +227,10 @@ public class FormMain {
 		SwingUtilities.invokeLater(() -> treeSounds.scrollPathToVisible(replace[0]));
 	}
 
+	void updateVol() {
+		sliderVol.setValue((int) (Main.getGain() * 100));
+	}
+
 	public static abstract class ClickListener implements MouseListener {
 		@Override
 		public void mousePressed(MouseEvent e) {
@@ -235,11 +254,19 @@ public class FormMain {
 	}
 
 	private static class SoundTreeModel extends DefaultTreeModel {
-		private static final DefaultMutableTreeNode root = new DefaultMutableTreeNode("Sounds");
 		private static final ArrayList<DefaultMutableTreeNode> nodes = new ArrayList<>();
+		private static final DefaultMutableTreeNode root = new DefaultMutableTreeNode("Sounds");
 
 		SoundTreeModel() {
 			super(root);
+		}
+
+		static ArrayList<DefaultMutableTreeNode> getNodes() {
+			return nodes;
+		}
+
+		static DefaultMutableTreeNode getRootNode() {
+			return root;
 		}
 
 		static void rebuild(File[] files) {
@@ -250,14 +277,6 @@ public class FormMain {
 				nodes.add(node);
 				root.add(node);
 			}
-		}
-
-		static ArrayList<DefaultMutableTreeNode> getNodes() {
-			return nodes;
-		}
-
-		static DefaultMutableTreeNode getRootNode() {
-			return root;
 		}
 	}
 
