@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
+import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
 import java.util.ArrayList;
@@ -93,6 +94,19 @@ public class FormMain {
 
 		sliderVol.setValue((int) (Main.getGain() * 100));
 
+		treeSounds.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getButton() == MouseEvent.BUTTON3) {
+					TreePath path = treeSounds.getPathForLocation(e.getPoint().x, e.getPoint().y);
+					if (path != null) {
+						File f = (File) ((DefaultMutableTreeNode) path.getLastPathComponent()).getUserObject();
+						if (getSelectedFiles().contains(f))
+							new FormRename(f);
+					}
+				}
+			}
+		});
 		treeSounds.setModel(treeSoundModel = new SoundTreeModel());
 		treeSounds.updateUI();
 
@@ -142,6 +156,7 @@ public class FormMain {
 			if (SoundTreeModel.getRootNode().getFirstChild() != null)
 				treeSounds.setSelectionPath(new TreePath(treeSoundModel.getPathToRoot(SoundTreeModel.getNodes().get(0))));
 			txtPath.setText(dir.getPath());
+			treeSounds.updateUI();
 		});
 	}
 
@@ -172,6 +187,13 @@ public class FormMain {
 		return rtn;
 	}
 
+	void focus() {
+		EventQueue.invokeLater(() -> {
+			frame.setExtendedState(JFrame.NORMAL);
+			treeSounds.requestFocus();
+		});
+	}
+
 	int getHeight() {
 		return frame.getHeight();
 	}
@@ -186,6 +208,10 @@ public class FormMain {
 
 	int getY() {
 		return frame.getY();
+	}
+
+	void setFocusable(boolean b) {
+		frame.setFocusable(b);
 	}
 
 	void updateNext() {

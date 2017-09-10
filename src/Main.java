@@ -24,6 +24,7 @@ public class Main {
 	static File       startDir;
 	static FormMain   window;
 	static FormKeys   windowKeys;
+	static FormRename windowRename;
 	private static float gainMod = 1.0f;
 	private static Mixer.Info           infoSpeakers;
 	private static MicManager.ThreadMic threadMic;
@@ -37,6 +38,7 @@ public class Main {
 		EnumKeyAction.NEXT.setAction(Main::soundNext);
 		EnumKeyAction.PREV.setAction(Main::soundPrev);
 		EnumKeyAction.RELAY.setAction(() -> window.updateRelay());
+		EnumKeyAction.FOCUS.setAction(() -> window.focus());
 	}
 
 	public static void main(String[] args) {
@@ -232,7 +234,8 @@ public class Main {
 		VOLDOWN,
 		NEXT,
 		PREV,
-		RELAY;
+		RELAY,
+		FOCUS;
 
 		private Runnable action;
 		private int    key     = 0;

@@ -8,6 +8,7 @@ public class FormKeys {
 	private final ArrayList<BindingButton> buttons = new ArrayList<>();
 	private final JFrame  frame;
 	private       JButton btnDone;
+	private       JButton btnFocus;
 	private       JButton btnNext;
 	private       JButton btnPlay;
 	private       JButton btnPrev;
@@ -30,6 +31,7 @@ public class FormKeys {
 		new BindingButton(btnNext, "Next", Main.EnumKeyAction.NEXT);
 		new BindingButton(btnPrev, "Prev", Main.EnumKeyAction.PREV);
 		new BindingButton(btnRelay, "Relay", Main.EnumKeyAction.RELAY);
+		new BindingButton(btnFocus, "Focus", Main.EnumKeyAction.FOCUS);
 
 		btnDone.addMouseListener(new FormMain.ClickListener() {
 			@Override
@@ -50,11 +52,11 @@ public class FormKeys {
 		frame.setLocation(loc);
 	}
 
-	public void updateButtons() {
+	void updateButtons() {
 		buttons.forEach(BindingButton::update);
 	}
 
-	public void close() {
+	void close() {
 		frame.dispose();
 	}
 
