@@ -1,7 +1,5 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.util.ArrayList;
 
 public class FormKeys {
@@ -33,12 +31,7 @@ public class FormKeys {
 		new BindingButton(btnRelay, "Relay", Main.EnumKeyAction.RELAY);
 		new BindingButton(btnFocus, "Focus", Main.EnumKeyAction.FOCUS);
 
-		btnDone.addMouseListener(new FormMain.ClickListener() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				close();
-			}
-		});
+		btnDone.addMouseListener((FormMain.ClickListener) (e) -> this.close());
 
 		updateButtons();
 
@@ -70,45 +63,11 @@ public class FormKeys {
 			this.name = name;
 			this.action = action;
 			buttons.add(this);
-			btn.addMouseListener(new ClickBinderListener(action));
+			btn.addMouseListener((FormMain.ClickListener) (e) -> Main.setBinding(action));
 		}
 
 		void update() {
 			btn.setText(name + " [" + action.getKeyName() + "]");
 		}
 	}
-
-	private class ClickBinderListener implements MouseListener {
-		final Main.EnumKeyAction binding;
-
-		ClickBinderListener(Main.EnumKeyAction action) {
-			this.binding = action;
-		}
-
-		@Override
-		public void mousePressed(MouseEvent e) {
-
-		}
-
-		@Override
-		public void mouseReleased(MouseEvent e) {
-
-		}
-
-		@Override
-		public void mouseEntered(MouseEvent e) {
-
-		}
-
-		@Override
-		public void mouseExited(MouseEvent e) {
-
-		}
-
-		@Override
-		public void mouseClicked(MouseEvent e) {
-			Main.setBinding(binding);
-		}
-	}
-
 }

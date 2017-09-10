@@ -21,6 +21,7 @@ public class FormRename {
 		}
 		this.renaming = f;
 		Main.window.frame.setEnabled(false);
+
 		frame = new JFrame("Rename");
 
 		txtName.setText(f.getName());
@@ -33,7 +34,6 @@ public class FormRename {
 			}
 		});
 		txtName.addActionListener((e) -> finishRenaming());
-
 		frame.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosed(WindowEvent e) {
@@ -57,7 +57,6 @@ public class FormRename {
 
 	void finishRenaming() {
 		try {
-
 			if (JOptionPane.showConfirmDialog(frame,"Are you sure you want to rename this file?","Confirm Rename", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
 				File newFile = new File(renaming.getParent(),txtName.getText());
 				Files.move(renaming.toPath(),newFile.toPath());

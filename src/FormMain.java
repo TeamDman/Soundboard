@@ -43,36 +43,11 @@ public class FormMain {
 			}
 		});
 
-		btnPlay.addMouseListener(new ClickListener() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				Main.play(getSelectedFiles());
-			}
-		});
-		btnStop.addMouseListener(new ClickListener() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				Main.stop();
-			}
-		});
-		btnRelay.addMouseListener(new ClickListener() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				updateRelay();
-			}
-		});
-		btnPicker.addMouseListener(new ClickListener() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				pick();
-			}
-		});
-		btnCfg.addMouseListener(new ClickListener() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				Main.windowKeys = new FormKeys();
-			}
-		});
+		btnPlay.addMouseListener((ClickListener) (e) -> Main.play(getSelectedFiles()));
+		btnStop.addMouseListener((ClickListener) (e) -> Main.stop());
+		btnRelay.addMouseListener((ClickListener) (e) -> updateRelay());
+		btnPicker.addMouseListener((ClickListener) (e) -> pick());
+		btnCfg.addMouseListener((ClickListener) (e) -> Main.windowKeys = new FormKeys());
 
 		chkParallel.addActionListener(e -> Main.allowParallelAudio = chkParallel.isSelected());
 		chkOnTop.addActionListener(e -> frame.setAlwaysOnTop(chkOnTop.isSelected()));
@@ -80,10 +55,16 @@ public class FormMain {
 			PreferenceManager.autoRelay = chkAutoRelay.isSelected();
 			PreferenceManager.save();
 		});
-
 		sliderVol.addChangeListener(e -> {
 			if (--debounce < 0)
 				Main.setGain(sliderVol.getValue() / 100.0f);
+		});
+		treeSounds.addMouseListener((ClickListener)(e) -> checkRightClick(e));
+		frame.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e) {
+				PreferenceManager.save();
+			}
 		});
 
 		for (Mixer.Info v : AudioSystem.getMixerInfo()) {
@@ -93,40 +74,19 @@ public class FormMain {
 		updateCombos();
 
 		sliderVol.setValue((int) (Main.getGain() * 100));
-
-		treeSounds.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				if (e.getButton() == MouseEvent.BUTTON3) {
-					TreePath path = treeSounds.getPathForLocation(e.getPoint().x, e.getPoint().y);
-					if (path != null) {
-						File f = (File) ((DefaultMutableTreeNode) path.getLastPathComponent()).getUserObject();
-						if (getSelectedFiles().contains(f))
-							new FormRename(f);
-					}
-				}
-			}
-		});
 		treeSounds.setModel(treeSoundModel = new SoundTreeModel());
 		treeSounds.updateUI();
+		chkOnTop.setSelected(PreferenceManager.alwaysOnTop);
+		chkAutoRelay.setSelected(PreferenceManager.autoRelay);
 
 		if (PreferenceManager.autoRelay) {
 			updateRelay();
 		}
 
-		chkOnTop.setSelected(PreferenceManager.alwaysOnTop);
-		chkAutoRelay.setSelected(PreferenceManager.autoRelay);
-
-		frame.addWindowListener(new WindowAdapter() {
-			@Override
-			public void windowClosing(WindowEvent e) {
-				PreferenceManager.save();
-			}
-		});
-		frame.setContentPane(panel);
-		frame.setLocation(PreferenceManager.windowX, PreferenceManager.windowY);
 		//noinspection MagicConstant
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setContentPane(panel);
+		frame.setLocation(PreferenceManager.windowX, PreferenceManager.windowY);
 		frame.pack();
 		if (PreferenceManager.windowW != -1 && PreferenceManager.windowW != -1)
 			frame.setSize(PreferenceManager.windowW, PreferenceManager.windowH);
@@ -142,6 +102,17 @@ public class FormMain {
 		}
 		Main.startDir = chooser.getSelectedFile();
 		PreferenceManager.save();
+	}
+
+	private void checkRightClick(MouseEvent e) {
+		if (e.getButton() == MouseEvent.BUTTON3) {
+			TreePath path = treeSounds.getPathForLocation(e.getPoint().x, e.getPoint().y);
+			if (path != null) {
+				File f = (File) ((DefaultMutableTreeNode) path.getLastPathComponent()).getUserObject();
+				if (getSelectedFiles().contains(f))
+					new FormRename(f);
+			}
+		}
 	}
 
 	void updateFromDir(File dir) {
@@ -210,10 +181,6 @@ public class FormMain {
 		return frame.getY();
 	}
 
-	void setFocusable(boolean b) {
-		frame.setFocusable(b);
-	}
-
 	void updateNext() {
 		TreePath[] paths = SoundTreeModel.getNodes().stream()
 				.map(e -> new TreePath(treeSoundModel.getPathToRoot(e)))
@@ -257,25 +224,21 @@ public class FormMain {
 		sliderVol.setValue((int) (Main.getGain() * 100));
 	}
 
-	public static abstract class ClickListener implements MouseListener {
+	public interface ClickListener extends MouseListener {
 		@Override
-		public void mousePressed(MouseEvent e) {
-
+		default void mousePressed(MouseEvent e) {
 		}
 
 		@Override
-		public void mouseReleased(MouseEvent e) {
-
+		default void mouseReleased(MouseEvent e) {
 		}
 
 		@Override
-		public void mouseEntered(MouseEvent e) {
-
+		default void mouseEntered(MouseEvent e) {
 		}
 
 		@Override
-		public void mouseExited(MouseEvent e) {
-
+		default void mouseExited(MouseEvent e) {
 		}
 	}
 
