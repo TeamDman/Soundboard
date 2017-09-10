@@ -1,3 +1,4 @@
+import javafx.util.Pair;
 import org.jnativehook.GlobalScreen;
 import org.jnativehook.keyboard.NativeKeyEvent;
 import org.jnativehook.keyboard.NativeKeyListener;
@@ -6,25 +7,26 @@ import javax.sound.sampled.*;
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
 	private static final ArrayList<FloatControl>                   gains              = new ArrayList<>();
 	private static final java.util.HashMap<Integer, EnumKeyAction> keybindings        = new HashMap<>();
-	private static final ArrayList<Clip>                           playingClips       = new ArrayList<>();
+	private static final ArrayList<Pair<Clip, ClipData>>           playingClips       = new ArrayList<>();
 	static               boolean                                   allowParallelAudio = true;
-	static File       currentDir;
+	static File currentDir;
 	static boolean receivingFilterInput = false;
 	static FormMain   window;
 	static FormKeys   windowKeys;
 	static FormRename windowRename;
-	private static float gainMod = 1.0f;
-	private static Mixer.Info infoCable;
-	private static Mixer.Info infoSpeakers;
+	private static boolean allowResume        = false;
+	private static int     allowResumeTimeout = 5;
+	private static float   gainMod            = 1.0f;
+	private static Mixer.Info           infoCable;
+	private static Mixer.Info           infoSpeakers;
 	private static MicManager.ThreadMic threadMic;
 	private static EnumKeyAction        toBind;
 
@@ -63,6 +65,7 @@ public class Main {
 					return;
 				}
 				if (!allowParallelAudio) {
+					allowResume = false;
 					stop();
 				}
 				try {
@@ -98,19 +101,44 @@ public class Main {
 	}
 
 	static void stop() {
-		for (Clip clip : playingClips) {
-			clip.stop();
+		System.out.println(allowResume);
+		for (Pair<Clip, ClipData> clip : playingClips) {
+			if (allowResume) {
+				clip.getKey().setMicrosecondPosition(clip.getValue().time);
+				clip.getKey().start();
+			} else {
+				clip.getValue().time = clip.getKey().getMicrosecondPosition();
+				clip.getKey().stop();
+			}
 		}
-		playingClips.clear();
-		gains.clear();
+		if (allowResume) {
+			allowResume = false;
+		} else {
+			allowResume = true;
+			new Timer().schedule(new TimerTask() {
+				@Override
+				public void run() {
+					allowResume = false;
+				}
+			}, allowResumeTimeout * 1000);
+		}
 	}
 
 	private static void playClip(AudioInputStream stream, Mixer.Info info, String name) throws LineUnavailableException, IOException {
 		Clip clip = AudioSystem.getClip(info);
+		Pair<Clip,ClipData> clipPair = new Pair<>(clip, new ClipData(name,info));
 		clip.addLineListener(e -> {
 			LineEvent.Type t = e.getType();
 			if (t == LineEvent.Type.START) {
 				window.updateStatus("Playing: " + name);
+			} else if (t == LineEvent.Type.STOP) {
+				if (clip.getMicrosecondLength() == clip.getMicrosecondPosition())
+					clip.close();
+			} else if (t == LineEvent.Type.CLOSE) {
+				playingClips.remove(clipPair);
+				gains.remove(clip.getControl(FloatControl.Type.MASTER_GAIN));
+				window.updatePlaying();
+				System.out.println("Removed clip from queue");
 			}
 		});
 		clip.open(stream);
@@ -119,7 +147,8 @@ public class Main {
 		gains.add(gain);
 		setGain(gainMod);
 		clip.start();
-		playingClips.add(clip);
+		playingClips.add(clipPair);
+		window.updatePlaying();
 	}
 
 	static boolean isRelaying() {
@@ -162,6 +191,10 @@ public class Main {
 		keybindings.put(key, action);
 		action.setKey(key, keyName);
 		toBind = null;
+	}
+
+	static ArrayList<Pair<Clip, ClipData>> getPlaying() {
+		return playingClips;
 	}
 
 	static float getGain() {
@@ -250,6 +283,17 @@ public class Main {
 		void setKey(int key, String keyName) {
 			this.key = key;
 			this.keyName = keyName;
+		}
+	}
+
+	static class ClipData {
+		Long time = -1l;
+		String name;
+		Mixer.Info info;
+
+		ClipData(String name,Mixer.Info info) {
+			this.name = name;
+			this.info = info;
 		}
 	}
 

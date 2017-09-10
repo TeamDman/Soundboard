@@ -26,12 +26,13 @@ public class FormMain {
 	private       JComboBox<Mixer.Info> comboCable;
 	private       JComboBox<Mixer.Info> comboSpeakers;
 	private int debounce = 3;
-	private JLabel     lblStatus;
-	private JPanel     panel;
-	private JSlider    sliderVol;
-	private JTree      treeSounds;
-	private JTextField txtFilter;
-	private JTextField txtPath;
+	private JLabel        lblStatus;
+	private JList<String> listPlaying;
+	private JPanel        panel;
+	private JSlider       sliderVol;
+	private JTree         treeSounds;
+	private JTextField    txtFilter;
+	private JTextField    txtPath;
 
 	public FormMain() {
 		frame = new JFrame("Soundboard");
@@ -140,6 +141,16 @@ public class FormMain {
 		});
 	}
 
+	void updatePlaying() {
+		EventQueue.invokeLater(() ->
+				listPlaying.setListData(Main.getPlaying().stream()
+						.filter(e -> e.getValue().info == Main.getInfoCable())
+						.map(e -> e.getValue().name)
+						.toArray(String[]::new)
+				)
+		);
+	}
+
 	void updateStatus(String txt) {
 		System.out.println(txt);
 		EventQueue.invokeLater(() -> lblStatus.setText(txt));
@@ -166,7 +177,7 @@ public class FormMain {
 			if (SoundTreeModel.files.length == 0)
 				files = Main.currentDir.listFiles();
 
-			Pattern         p       = Pattern.compile(txtFilter.getText(), Pattern.CASE_INSENSITIVE);
+			Pattern p = Pattern.compile(txtFilter.getText(), Pattern.CASE_INSENSITIVE);
 
 			ArrayList<File> refined = new ArrayList<>();
 
@@ -198,6 +209,8 @@ public class FormMain {
 			txtFilter.setText(txtFilter.getText().substring(0, txtFilter.getText().length() - 1));
 		else if (c.equals("Space"))
 			txtFilter.setText(txtFilter.getText() + " ");
+		else if (c.length() > 1)
+			System.out.println("Fake focus typing attempted to add long string '" + c + "'");
 		else
 			txtFilter.setText(txtFilter.getText() + c);
 		txtFilter.setCaretPosition(txtFilter.getText().length());
@@ -301,11 +314,20 @@ public class FormMain {
 			SoundTreeModel.files = files;
 			root.removeAllChildren();
 			nodes.clear();
+
 			for (File f : files) {
-				DefaultMutableTreeNode node = new DefaultMutableTreeNode(f);
-				nodes.add(node);
-				root.add(node);
+				add(f, root);
 			}
+		}
+
+		private static void add(File file, DefaultMutableTreeNode node) {
+			DefaultMutableTreeNode nodeNew = new DefaultMutableTreeNode(file);
+			nodes.add(nodeNew);
+			if (file.isDirectory()) {
+				for (File f : file.listFiles())
+					add(f, nodeNew);
+			}
+			node.add(nodeNew);
 		}
 
 		public static File[] getFiles() {
