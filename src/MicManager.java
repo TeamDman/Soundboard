@@ -14,7 +14,7 @@ class MicManager {
 				targetLine.open(format);
 				targetLine.start();
 
-				SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getMixer(Main.infoCable).getLine(sourceInfo);
+				SourceDataLine sourceLine = (SourceDataLine) AudioSystem.getMixer(Main.getInfoCable()).getLine(sourceInfo);
 				sourceLine.open(format);
 				sourceLine.start();
 

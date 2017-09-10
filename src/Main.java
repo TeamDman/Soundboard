@@ -4,11 +4,9 @@ import org.jnativehook.keyboard.NativeKeyListener;
 
 import javax.sound.sampled.*;
 import javax.swing.*;
-import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
@@ -18,15 +16,15 @@ public class Main {
 	private static final ArrayList<FloatControl>                   gains              = new ArrayList<>();
 	private static final java.util.HashMap<Integer, EnumKeyAction> keybindings        = new HashMap<>();
 	private static final ArrayList<Clip>                           playingClips       = new ArrayList<>();
-	private static final ArrayList<File>                           sounds             = new ArrayList<>();
 	static               boolean                                   allowParallelAudio = true;
-	static Mixer.Info infoCable;
-	static File       startDir;
+	static File       currentDir;
+	static boolean receivingFilterInput = false;
 	static FormMain   window;
 	static FormKeys   windowKeys;
 	static FormRename windowRename;
 	private static float gainMod = 1.0f;
-	private static Mixer.Info           infoSpeakers;
+	private static Mixer.Info infoCable;
+	private static Mixer.Info infoSpeakers;
 	private static MicManager.ThreadMic threadMic;
 	private static EnumKeyAction        toBind;
 
@@ -53,10 +51,7 @@ public class Main {
 		Logger.getLogger(GlobalScreen.class.getPackage().getName()).setLevel(Level.OFF);
 		PreferenceManager.init();
 
-		EventQueue.invokeLater(() -> {
-			window = new FormMain();
-			window.updateFromDir(startDir);
-		});
+		window = new FormMain();
 
 	}
 
@@ -126,11 +121,6 @@ public class Main {
 		clip.start();
 		playingClips.add(clip);
 	}
-
-	static void addFiles(File[] f) {
-		Collections.addAll(sounds, f);
-	}
-
 
 	static boolean isRelaying() {
 		return threadMic != null;
@@ -276,8 +266,16 @@ public class Main {
 				windowKeys.updateButtons();
 			} else {
 				EnumKeyAction exec;
-				if ((exec = keybindings.get(e.getRawCode())) != null)
+				if ((exec = keybindings.get(e.getRawCode())) != null) {
 					exec.getAction().run();
+					return;
+				}
+				if (e.getKeyCode() == NativeKeyEvent.VC_ENTER) {
+					receivingFilterInput = false;
+					window.updateFilter();
+				}
+				if (receivingFilterInput)
+					window.addInput(NativeKeyEvent.getKeyText(e.getKeyCode()));
 			}
 		}
 

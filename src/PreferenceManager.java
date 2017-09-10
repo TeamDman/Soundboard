@@ -11,7 +11,7 @@ class PreferenceManager {
 	static int     windowX, windowY, windowW, windowH;
 
 	public static void init() {
-		Main.startDir = new File(prefs.get("startdir", "%userprofile%"));
+		Main.currentDir = new File(prefs.get("startdir", "%userprofile%"));
 		Main.setGain(prefs.getFloat("gain", 1f), true);
 		autoRelay = prefs.getBoolean("autorelay", false);
 		alwaysOnTop = prefs.getBoolean("alwaysontop", false);
@@ -41,7 +41,7 @@ class PreferenceManager {
 	}
 
 	public static void save() {
-		prefs.put("startdir", Main.startDir.getAbsolutePath());
+		prefs.put("startdir", Main.currentDir.getAbsolutePath());
 		prefs.putFloat("gain", Main.getGain());
 		prefs.putBoolean("autorelay", autoRelay);
 		prefs.put("nameCable", Main.getInfoCable().getName());

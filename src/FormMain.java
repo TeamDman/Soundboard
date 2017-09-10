@@ -9,6 +9,8 @@ import java.awt.event.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class FormMain {
 	public final  JFrame                frame;
@@ -28,10 +30,12 @@ public class FormMain {
 	private JPanel     panel;
 	private JSlider    sliderVol;
 	private JTree      treeSounds;
+	private JTextField txtFilter;
 	private JTextField txtPath;
 
 	public FormMain() {
 		frame = new JFrame("Soundboard");
+
 		comboCable.addItemListener(e -> {
 			if (e.getStateChange() == ItemEvent.SELECTED && --debounce < 0) {
 				Main.setInfoCable((Mixer.Info) e.getItem());
@@ -59,13 +63,14 @@ public class FormMain {
 			if (--debounce < 0)
 				Main.setGain(sliderVol.getValue() / 100.0f);
 		});
-		treeSounds.addMouseListener((ClickListener)(e) -> checkRightClick(e));
+		treeSounds.addMouseListener((ClickListener) (e) -> checkRightClick(e));
 		frame.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
 				PreferenceManager.save();
 			}
 		});
+		txtFilter.addActionListener((e) -> updateFilter());
 
 		for (Mixer.Info v : AudioSystem.getMixerInfo()) {
 			comboCable.addItem(v);
@@ -83,6 +88,8 @@ public class FormMain {
 			updateRelay();
 		}
 
+		updateFromDir(Main.currentDir);
+
 		//noinspection MagicConstant
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setContentPane(panel);
@@ -96,11 +103,11 @@ public class FormMain {
 	private void pick() {
 		JFileChooser chooser = new JFileChooser();
 		chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-		chooser.setCurrentDirectory(Main.startDir);
+		chooser.setCurrentDirectory(Main.currentDir);
 		if (chooser.showOpenDialog(panel) == JFileChooser.APPROVE_OPTION) {
 			updateFromDir(chooser.getSelectedFile());
 		}
-		Main.startDir = chooser.getSelectedFile();
+		Main.currentDir = chooser.getSelectedFile();
 		PreferenceManager.save();
 	}
 
@@ -120,20 +127,22 @@ public class FormMain {
 			updateStatus("Directory contains no files!");
 			return;
 		}
-		Main.addFiles(dir.listFiles());
+		updateFromFiles(dir.listFiles());
+		EventQueue.invokeLater(() -> txtPath.setText(dir.getPath()));
+	}
 
-		SwingUtilities.invokeLater(() -> {
-			SoundTreeModel.rebuild(dir.listFiles());
-			if (SoundTreeModel.getRootNode().getFirstChild() != null)
+	void updateFromFiles(File[] files) {
+		EventQueue.invokeLater(() -> {
+			SoundTreeModel.rebuild(files);
+			if (SoundTreeModel.getRootNode().children().hasMoreElements())
 				treeSounds.setSelectionPath(new TreePath(treeSoundModel.getPathToRoot(SoundTreeModel.getNodes().get(0))));
-			txtPath.setText(dir.getPath());
 			treeSounds.updateUI();
 		});
 	}
 
 	void updateStatus(String txt) {
 		System.out.println(txt);
-		lblStatus.setText(txt);
+		EventQueue.invokeLater(() -> lblStatus.setText(txt));
 	}
 
 	void updateCombos() {
@@ -149,6 +158,28 @@ public class FormMain {
 		comboCable.setEnabled(!Main.isRelaying());
 	}
 
+	void updateFilter() {
+		if (txtFilter.getText().length() == 0) {
+			updateFromDir(Main.currentDir);
+		} else {
+			File[] files = SoundTreeModel.getFiles();
+			if (SoundTreeModel.files.length == 0)
+				files = Main.currentDir.listFiles();
+
+			Pattern         p       = Pattern.compile(txtFilter.getText(), Pattern.CASE_INSENSITIVE);
+
+			ArrayList<File> refined = new ArrayList<>();
+
+			for (File f : files) {
+				Matcher m = p.matcher(f.getName());
+				if (m.find())
+					refined.add(f);
+			}
+			updateFromFiles(refined.stream().toArray(File[]::new));
+		}
+
+	}
+
 	List<File> getSelectedFiles() {
 		List<File> rtn = new ArrayList<>();
 		for (TreePath path : treeSounds.getSelectionModel().getSelectionPaths()) {
@@ -159,10 +190,17 @@ public class FormMain {
 	}
 
 	void focus() {
-		EventQueue.invokeLater(() -> {
-			frame.setExtendedState(JFrame.NORMAL);
-			treeSounds.requestFocus();
-		});
+		Main.receivingFilterInput = true;
+	}
+
+	void addInput(String c) {
+		if (c.equals("Backspace"))
+			txtFilter.setText(txtFilter.getText().substring(0, txtFilter.getText().length() - 1));
+		else if (c.equals("Space"))
+			txtFilter.setText(txtFilter.getText() + " ");
+		else
+			txtFilter.setText(txtFilter.getText() + c);
+		txtFilter.setCaretPosition(txtFilter.getText().length());
 	}
 
 	int getHeight() {
@@ -224,7 +262,7 @@ public class FormMain {
 		sliderVol.setValue((int) (Main.getGain() * 100));
 	}
 
-	public interface ClickListener extends MouseListener {
+	interface ClickListener extends MouseListener {
 		@Override
 		default void mousePressed(MouseEvent e) {
 		}
@@ -242,9 +280,10 @@ public class FormMain {
 		}
 	}
 
-	private static class SoundTreeModel extends DefaultTreeModel {
+	static class SoundTreeModel extends DefaultTreeModel {
 		private static final ArrayList<DefaultMutableTreeNode> nodes = new ArrayList<>();
 		private static final DefaultMutableTreeNode            root  = new DefaultMutableTreeNode("Sounds");
+		private static File[] files;
 
 		SoundTreeModel() {
 			super(root);
@@ -259,6 +298,7 @@ public class FormMain {
 		}
 
 		static void rebuild(File[] files) {
+			SoundTreeModel.files = files;
 			root.removeAllChildren();
 			nodes.clear();
 			for (File f : files) {
@@ -266,6 +306,10 @@ public class FormMain {
 				nodes.add(node);
 				root.add(node);
 			}
+		}
+
+		public static File[] getFiles() {
+			return files;
 		}
 	}
 
