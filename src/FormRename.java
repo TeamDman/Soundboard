@@ -5,15 +5,14 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 
-public class FormRename {
-	private JButton    btnSubmit;
-	private JFrame     frame;
-	private JPanel     panel;
-	private File       renaming;
-	private JTextField txtName;
+class FormRename {
+	private final JFrame     frame;
+	private final File       renaming;
+	private       JButton    btnSubmit;
+	private       JPanel     panel;
+	private       JTextField txtName;
 
 	public FormRename(File f) {
 		if (Main.windowRename != null) {
@@ -51,11 +50,7 @@ public class FormRename {
 		frame.setLocation(loc);
 	}
 
-	void close() {
-		frame.dispose();
-	}
-
-	void finishRenaming() {
+	private void finishRenaming() {
 		try {
 			if (JOptionPane.showConfirmDialog(frame,"Are you sure you want to rename this file?","Confirm Rename", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
 				File newFile = new File(renaming.getParent(),txtName.getText());
@@ -66,5 +61,9 @@ public class FormRename {
 			Main.window.updateStatus(e.getLocalizedMessage());
 			e.printStackTrace();
 		}
+	}
+
+	private void close() {
+		frame.dispose();
 	}
 }

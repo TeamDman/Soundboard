@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 
 public class FormKeys {
@@ -15,6 +17,7 @@ public class FormKeys {
 	private       JButton btnVolDown;
 	private       JButton btnVolUp;
 	private       JPanel  panel;
+	private       JButton btnClear;
 
 	public FormKeys() {
 		if (Main.windowKeys != null) {
@@ -30,6 +33,7 @@ public class FormKeys {
 		new BindingButton(btnPrev, "Prev", Main.EnumKeyAction.PREV);
 		new BindingButton(btnRelay, "Relay", Main.EnumKeyAction.RELAY);
 		new BindingButton(btnFocus, "Focus", Main.EnumKeyAction.FOCUS);
+		new BindingButton(btnClear, "Clear", Main.EnumKeyAction.CLEAR);
 
 		btnDone.addMouseListener((FormMain.ClickListener) (e) -> this.close());
 
@@ -63,7 +67,17 @@ public class FormKeys {
 			this.name = name;
 			this.action = action;
 			buttons.add(this);
-			btn.addMouseListener((FormMain.ClickListener) (e) -> Main.setBinding(action));
+			btn.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseClicked(MouseEvent e) {
+					if (e.getButton() == MouseEvent.BUTTON2) { // middle click
+						action.setKey(0, "undefined");
+					} else if (e.getButton() == MouseEvent.BUTTON1) {
+						Main.setToBind(action);
+					}
+					updateButtons();
+				}
+			});
 		}
 
 		void update() {

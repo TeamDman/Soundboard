@@ -9,14 +9,14 @@ import java.awt.event.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class FormMain {
+class FormMain {
 	public final  JFrame                frame;
 	private final SoundTreeModel        treeSoundModel;
 	private       JButton               btnCfg;
+	private       JButton               btnClear;
 	private       JButton               btnPicker;
 	private       JButton               btnPlay;
 	private       JButton               btnRelay;
@@ -31,6 +31,7 @@ public class FormMain {
 	private JList<Main.ClipData> listPlaying;
 	private JPanel               panel;
 	private JSlider              sliderVol;
+	private JSplitPane           splitPane;
 	private JTree                treeSounds;
 	private JTextField           txtFilter;
 	private JTextField           txtPath;
@@ -49,9 +50,10 @@ public class FormMain {
 			}
 		});
 
-		btnPlay.addMouseListener((ClickListener) (e) -> Main.play(getSelectedFiles()));
-		btnStop.addMouseListener((ClickListener) (e) -> Main.stop());
-		btnRelay.addMouseListener((ClickListener) (e) -> updateRelay());
+		btnPlay.addMouseListener((ClickListener) (e) -> Main.EnumKeyAction.PLAY.getAction().run());
+		btnStop.addMouseListener((ClickListener) (e) -> Main.EnumKeyAction.STOP.getAction().run());
+		btnClear.addMouseListener((ClickListener) (e) -> Main.EnumKeyAction.CLEAR.getAction().run());
+		btnRelay.addMouseListener((ClickListener) (e) -> Main.EnumKeyAction.RELAY.getAction().run());
 		btnPicker.addMouseListener((ClickListener) (e) -> pick());
 		btnCfg.addMouseListener((ClickListener) (e) -> Main.windowKeys = new FormKeys());
 
@@ -62,10 +64,12 @@ public class FormMain {
 			PreferenceManager.save();
 		});
 		sliderVol.addChangeListener(e -> {
-			if (--debounce < 0)
+			if (--debounce < 0) {
 				Main.updateGains(sliderVol.getValue() / 100.0f);
+				PreferenceManager.save();
+			}
 		});
-		treeSounds.addMouseListener((ClickListener) (e) -> checkTreeRightClick(e));
+		treeSounds.addMouseListener((ClickListener) this::checkTreeRightClick);
 		frame.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
@@ -73,7 +77,8 @@ public class FormMain {
 			}
 		});
 		txtFilter.addActionListener((e) -> updateFilter());
-		listPlaying.addMouseListener((ClickListener) (e) -> checkListRightClick(e));
+		listPlaying.addMouseListener((ClickListener) this::checkListRightClick);
+		splitPane.addPropertyChangeListener(JSplitPane.DIVIDER_LOCATION_PROPERTY, (e) -> PreferenceManager.save());
 
 		for (Mixer.Info v : AudioSystem.getMixerInfo()) {
 			comboCable.addItem(v);
@@ -86,7 +91,6 @@ public class FormMain {
 		treeSounds.updateUI();
 		chkOnTop.setSelected(PreferenceManager.alwaysOnTop);
 		chkAutoRelay.setSelected(PreferenceManager.autoRelay);
-
 		if (PreferenceManager.autoRelay) {
 			updateRelay();
 		}
@@ -98,9 +102,14 @@ public class FormMain {
 		frame.setContentPane(panel);
 		frame.setLocation(PreferenceManager.windowX, PreferenceManager.windowY);
 		frame.pack();
-		if (PreferenceManager.windowW != -1 && PreferenceManager.windowW != -1)
+		if (PreferenceManager.windowW != -1 && PreferenceManager.windowW != -1) {
 			frame.setSize(PreferenceManager.windowW, PreferenceManager.windowH);
+		}
 		frame.setVisible(true);
+		if (PreferenceManager.dividerX == -1)
+			splitPane.setDividerLocation(0.5);
+		else
+			splitPane.setDividerLocation(PreferenceManager.dividerX);
 	}
 
 	private void pick() {
@@ -108,9 +117,9 @@ public class FormMain {
 		chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		chooser.setCurrentDirectory(Main.currentDir);
 		if (chooser.showOpenDialog(panel) == JFileChooser.APPROVE_OPTION) {
-			updateFromDir(chooser.getSelectedFile());
+			Main.currentDir = chooser.getSelectedFile();
+			updateFromDir(Main.currentDir);
 		}
-		Main.currentDir = chooser.getSelectedFile();
 		PreferenceManager.save();
 	}
 
@@ -125,37 +134,21 @@ public class FormMain {
 		}
 	}
 
+	List<File> getSelectedFiles() {
+		List<File> rtn = new ArrayList<>();
+		for (TreePath path : treeSounds.getSelectionModel().getSelectionPaths()) {
+			DefaultMutableTreeNode selected = (DefaultMutableTreeNode) path.getLastPathComponent();
+			rtn.add((File) selected.getUserObject());
+		}
+		return rtn;
+	}
+
 	private void checkListRightClick(MouseEvent e) {
 		if (e.getButton() == MouseEvent.BUTTON3) {
-			ArrayList<Main.ClipData> toRemove = new ArrayList<>();
-			toRemove.addAll(listPlaying.getSelectedValuesList());
-			//Prevent concurrent mod error
-			toRemove.forEach(data -> data.clip.close());
-			Main.getPlaying().removeAll(toRemove);
-			ListIterator<Main.ClipData> iter = Main.getPlaying().listIterator();
-			System.out.println("O BOY");
-			Main.getPlaying().forEach(ev -> System.out.println(ev));
+			Main.stop(listPlaying.getSelectedValuesList());
 			updatePlaying();
 			//Cleanup handled by closelistener
 		}
-	}
-
-	void updateFromDir(File dir) {
-		if (dir == null || !dir.exists()) {
-			updateStatus("Directory contains no files!");
-			return;
-		}
-		updateFromFiles(dir.listFiles());
-		EventQueue.invokeLater(() -> txtPath.setText(dir.getPath()));
-	}
-
-	void updateFromFiles(File[] files) {
-		EventQueue.invokeLater(() -> {
-			SoundTreeModel.rebuild(files);
-			if (SoundTreeModel.getRootNode().children().hasMoreElements())
-				treeSounds.setSelectionPath(new TreePath(treeSoundModel.getPathToRoot(SoundTreeModel.getNodes().get(0))));
-			treeSounds.updateUI();
-		});
 	}
 
 	void updatePlaying() {
@@ -166,6 +159,24 @@ public class FormMain {
 				//				)
 				listPlaying.setListData(Main.getPlaying().toArray(new Main.ClipData[Main.getPlaying().size()]))
 		);
+	}
+
+	private void updateFromDir(File dir) {
+		if (dir == null || !dir.exists()) {
+			updateStatus("Directory contains no files!");
+			return;
+		}
+		updateFromFiles(dir.listFiles());
+		EventQueue.invokeLater(() -> txtPath.setText(dir.getPath()));
+	}
+
+	private void updateFromFiles(File[] files) {
+		EventQueue.invokeLater(() -> {
+			SoundTreeModel.rebuild(files);
+			if (SoundTreeModel.getRootNode().children().hasMoreElements())
+				treeSounds.setSelectionPath(new TreePath(treeSoundModel.getPathToRoot(SoundTreeModel.getNodes().get(0))));
+			treeSounds.updateUI();
+		});
 	}
 
 	void updateStatus(String txt) {
@@ -186,6 +197,10 @@ public class FormMain {
 		comboCable.setEnabled(!Main.isRelaying());
 	}
 
+	void updateButtons() {
+		EventQueue.invokeLater(() -> btnStop.setText(Main.allowResume ? "Resume" : "Stop"));
+	}
+
 	void updateFilter() {
 		if (txtFilter.getText().length() == 0) {
 			updateFromDir(Main.currentDir);
@@ -203,18 +218,9 @@ public class FormMain {
 				if (m.find())
 					refined.add(f);
 			}
-			updateFromFiles(refined.stream().toArray(File[]::new));
+			updateFromFiles(refined.toArray(new File[0]));
 		}
 
-	}
-
-	List<File> getSelectedFiles() {
-		List<File> rtn = new ArrayList<>();
-		for (TreePath path : treeSounds.getSelectionModel().getSelectionPaths()) {
-			DefaultMutableTreeNode selected = (DefaultMutableTreeNode) path.getLastPathComponent();
-			rtn.add((File) selected.getUserObject());
-		}
-		return rtn;
 	}
 
 	void focus() {
@@ -247,6 +253,10 @@ public class FormMain {
 
 	int getY() {
 		return frame.getY();
+	}
+
+	int getDividerX() {
+		return splitPane.getDividerLocation();
 	}
 
 	void updateNext() {
@@ -347,7 +357,7 @@ public class FormMain {
 			node.add(nodeNew);
 		}
 
-		public static File[] getFiles() {
+		static File[] getFiles() {
 			return files;
 		}
 	}

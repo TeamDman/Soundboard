@@ -8,19 +8,21 @@ class PreferenceManager {
 	private static final Preferences prefs = Preferences.userNodeForPackage(Main.class);
 	static boolean alwaysOnTop;
 	static boolean autoRelay;
+	static int     dividerX;
 	static int     windowX, windowY, windowW, windowH;
 
 	public static void init() {
 		Main.currentDir = new File(prefs.get("startdir", "%userprofile%"));
-		Main.setGain(prefs.getFloat("gain", 1f), true);
+		Main.updateGains(prefs.getFloat("gain", 1f));
 		autoRelay = prefs.getBoolean("autorelay", false);
 		alwaysOnTop = prefs.getBoolean("alwaysontop", false);
 		windowX = prefs.getInt("windowx", 0);
 		windowY = prefs.getInt("windowy", 0);
 		windowW = prefs.getInt("windoww", -1);
 		windowH = prefs.getInt("windowh", -1);
+		dividerX = prefs.getInt("dividerx", -1);
 		for (Main.EnumKeyAction action : Main.EnumKeyAction.values())
-			Main.setBinding(action, prefs.getInt(action.name() + "key", -1), prefs.get(action.name() + "keyName", "undefined"));
+			action.setKey(prefs.getInt(action.name() + "key", -1), prefs.get(action.name() + "keyName", "undefined"));
 
 		Mixer.Info[] infos        = AudioSystem.getMixerInfo();
 		String       nameCable    = prefs.get("nameCable", null);
@@ -56,6 +58,7 @@ class PreferenceManager {
 			prefs.putInt("windowy", Main.window.getY());
 			prefs.putInt("windoww", Main.window.getWidth());
 			prefs.putInt("windowh", Main.window.getHeight());
+			prefs.putInt("dividerx", Main.window.getDividerX());
 			Main.window.updateStatus("Prefs saved");
 		}
 	}

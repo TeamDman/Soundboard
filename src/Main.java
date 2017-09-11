@@ -4,25 +4,28 @@ import org.jnativehook.keyboard.NativeKeyListener;
 
 import javax.sound.sampled.*;
 import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Timer;
+import java.util.TimerTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
-	private static final java.util.HashMap<Integer, EnumKeyAction> keybindings        = new HashMap<>();
-	private static final ArrayList<ClipData>                       playingClips       = new ArrayList<>();
-	static               boolean                                   allowParallelAudio = true;
+	private static final int                  allowResumeTimeout = 5;
+	private static final ArrayList<ClipData>  playingClips       = new ArrayList<>();
+	private static final ArrayList<TimerTask> tasksResumers      = new ArrayList<>();
+	static               boolean              allowParallelAudio = true;
+	static               boolean              allowResume        = false;
 	static File currentDir;
 	static boolean receivingFilterInput = false;
 	static FormMain   window;
 	static FormKeys   windowKeys;
 	static FormRename windowRename;
-	private static boolean allowResume        = false;
-	private static int     allowResumeTimeout = 5;
-	private static float   gainMod            = 1.0f;
+	private static float gainMod = 1.0f;
 	private static Mixer.Info           infoCable;
 	private static Mixer.Info           infoSpeakers;
 	private static MicManager.ThreadMic threadMic;
@@ -37,6 +40,7 @@ public class Main {
 		EnumKeyAction.PREV.setAction(Main::soundPrev);
 		EnumKeyAction.RELAY.setAction(() -> window.updateRelay());
 		EnumKeyAction.FOCUS.setAction(() -> window.focus());
+		EnumKeyAction.CLEAR.setAction(() -> stop(playingClips));
 	}
 
 	public static void main(String[] args) {
@@ -50,12 +54,13 @@ public class Main {
 		GlobalScreen.addNativeKeyListener(new GlobalKeyListener());
 		Logger.getLogger(GlobalScreen.class.getPackage().getName()).setLevel(Level.OFF);
 		PreferenceManager.init();
-
-		window = new FormMain();
+		EventQueue.invokeLater(() ->
+				window = new FormMain()
+		);
 
 	}
 
-	static void play(List<File> listFiles) {
+	private static void play(List<File> listFiles) {
 		new Thread(() -> {
 			for (File file : listFiles) {
 				if (file == null || !file.exists()) {
@@ -90,7 +95,7 @@ public class Main {
 						//										false);
 					}
 				} catch (Exception e) {
-					System.out.println("Exception occurred");
+					System.out.println("Exception occurred playing clip");
 					e.printStackTrace();
 					window.updateStatus(e.getLocalizedMessage());
 				}
@@ -98,7 +103,7 @@ public class Main {
 		}).start();
 	}
 
-	static void stop() {
+	private static void stop() {
 		for (ClipData data : playingClips) {
 			if (allowResume) {
 				data.clip.setMicrosecondPosition(data.time);
@@ -110,14 +115,21 @@ public class Main {
 		}
 		if (allowResume) {
 			allowResume = false;
+			window.updateButtons();
 		} else {
 			allowResume = true;
-			new Timer().schedule(new TimerTask() {
+			window.updateButtons();
+			tasksResumers.forEach(TimerTask::cancel);
+			tasksResumers.clear();
+			TimerTask task = new TimerTask() {
 				@Override
 				public void run() {
 					allowResume = false;
+					window.updateButtons();
 				}
-			}, allowResumeTimeout * 1000);
+			};
+			tasksResumers.add(task);
+			new Timer().schedule(task, allowResumeTimeout * 1000);
 		}
 	}
 
@@ -138,11 +150,29 @@ public class Main {
 			}
 		});
 		clip.open(stream);
-
+		playingClips.add(data);
 		updateGains(gainMod);
 		clip.start();
-		playingClips.add(data);
 		window.updatePlaying();
+	}
+
+	static void updateGains(float v) {
+		gainMod = v;
+		for (ClipData data : playingClips) {
+			FloatControl gain = (FloatControl) data.clip.getControl(FloatControl.Type.MASTER_GAIN);
+			gain.setValue(((gain.getMaximum() - gain.getMinimum()) * gainMod) + gain.getMinimum());
+		}
+	}
+
+	static void stop(List<ClipData> toStop) {
+		ArrayList<Main.ClipData> toRemove = new ArrayList<>();
+		toRemove.addAll(toStop);
+		toRemove.forEach(data -> data.clip.close());
+		Main.getPlaying().removeAll(toRemove);
+	}
+
+	static ArrayList<ClipData> getPlaying() {
+		return playingClips;
 	}
 
 	static boolean isRelaying() {
@@ -177,35 +207,12 @@ public class Main {
 			window.updateCombos();
 	}
 
-	static void setBinding(EnumKeyAction action) {
+	static void setToBind(EnumKeyAction action) {
 		toBind = action;
-	}
-
-	static void setBinding(EnumKeyAction action, int key, String keyName) {
-		keybindings.put(key, action);
-		action.setKey(key, keyName);
-		toBind = null;
-	}
-
-	static ArrayList<ClipData> getPlaying() {
-		return playingClips;
 	}
 
 	static float getGain() {
 		return gainMod;
-	}
-
-	static void updateGains(float v) {
-		gainMod = v;
-		PreferenceManager.save();
-		for (ClipData data : playingClips) {
-			FloatControl gain = (FloatControl) data.clip.getControl(FloatControl.Type.MASTER_GAIN);
-			gain.setValue(((gain.getMaximum() - gain.getMinimum()) * gainMod) + gain.getMinimum());
-		}
-	}
-
-	static void setGain(float v, boolean preventPrefSave) {
-		gainMod = v;
 	}
 
 	static void toggleRelay() {
@@ -224,7 +231,6 @@ public class Main {
 			threadMic.start();
 		}
 	}
-
 
 	private static void soundNext() {
 		window.updateNext();
@@ -253,7 +259,8 @@ public class Main {
 		NEXT,
 		PREV,
 		RELAY,
-		FOCUS;
+		FOCUS,
+		CLEAR;
 
 		private Runnable action;
 		private int    key     = 0;
@@ -282,10 +289,10 @@ public class Main {
 	}
 
 	static class ClipData {
-		Clip clip;
-		Mixer.Info info;
-		String     name;
-		Long time = -1l;
+		final Clip       clip;
+		final Mixer.Info info;
+		final String     name;
+		Long time = -1L;
 
 		ClipData(Clip clip, String name, Mixer.Info info) {
 			this.clip = clip;
@@ -295,7 +302,7 @@ public class Main {
 
 		@Override
 		public String toString() {
-			return (info.equals(Main.getInfoCable()) ? "[Speakers] " : "[Cable] ") +  name;
+			return (info.equals(Main.getInfoCable()) ? "[Speakers] " : "[Cable] ") + name;
 		}
 	}
 
@@ -307,14 +314,16 @@ public class Main {
 		public void nativeKeyPressed(NativeKeyEvent e) {
 			if (toBind != null) {
 				System.out.println("BINDING KEY");
-				setBinding(toBind, e.getRawCode(), NativeKeyEvent.getKeyText(e.getKeyCode()));
+				toBind.setKey(e.getRawCode(), NativeKeyEvent.getKeyText(e.getKeyCode()));
+				toBind = null;
 				PreferenceManager.save();
 				windowKeys.updateButtons();
 			} else {
-				EnumKeyAction exec;
-				if ((exec = keybindings.get(e.getRawCode())) != null) {
-					exec.getAction().run();
-					return;
+				for (EnumKeyAction action : EnumKeyAction.values()) {
+					if (action.getKey() == e.getRawCode()) {
+						action.getAction().run();
+						return;
+					}
 				}
 				if (e.getKeyCode() == NativeKeyEvent.VC_ENTER) {
 					receivingFilterInput = false;
