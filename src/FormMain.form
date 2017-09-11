@@ -225,7 +225,7 @@
           <component id="4d67" class="javax.swing.JList" binding="listPlaying">
             <constraints/>
             <properties>
-              <enabled value="false"/>
+              <enabled value="true"/>
             </properties>
           </component>
         </children>

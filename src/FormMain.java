@@ -9,6 +9,7 @@ import java.awt.event.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,13 +27,13 @@ public class FormMain {
 	private       JComboBox<Mixer.Info> comboCable;
 	private       JComboBox<Mixer.Info> comboSpeakers;
 	private int debounce = 3;
-	private JLabel        lblStatus;
-	private JList<String> listPlaying;
-	private JPanel        panel;
-	private JSlider       sliderVol;
-	private JTree         treeSounds;
-	private JTextField    txtFilter;
-	private JTextField    txtPath;
+	private JLabel               lblStatus;
+	private JList<Main.ClipData> listPlaying;
+	private JPanel               panel;
+	private JSlider              sliderVol;
+	private JTree                treeSounds;
+	private JTextField           txtFilter;
+	private JTextField           txtPath;
 
 	public FormMain() {
 		frame = new JFrame("Soundboard");
@@ -62,9 +63,9 @@ public class FormMain {
 		});
 		sliderVol.addChangeListener(e -> {
 			if (--debounce < 0)
-				Main.setGain(sliderVol.getValue() / 100.0f);
+				Main.updateGains(sliderVol.getValue() / 100.0f);
 		});
-		treeSounds.addMouseListener((ClickListener) (e) -> checkRightClick(e));
+		treeSounds.addMouseListener((ClickListener) (e) -> checkTreeRightClick(e));
 		frame.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
@@ -72,6 +73,7 @@ public class FormMain {
 			}
 		});
 		txtFilter.addActionListener((e) -> updateFilter());
+		listPlaying.addMouseListener((ClickListener) (e) -> checkListRightClick(e));
 
 		for (Mixer.Info v : AudioSystem.getMixerInfo()) {
 			comboCable.addItem(v);
@@ -112,7 +114,7 @@ public class FormMain {
 		PreferenceManager.save();
 	}
 
-	private void checkRightClick(MouseEvent e) {
+	private void checkTreeRightClick(MouseEvent e) {
 		if (e.getButton() == MouseEvent.BUTTON3) {
 			TreePath path = treeSounds.getPathForLocation(e.getPoint().x, e.getPoint().y);
 			if (path != null) {
@@ -120,6 +122,21 @@ public class FormMain {
 				if (getSelectedFiles().contains(f))
 					new FormRename(f);
 			}
+		}
+	}
+
+	private void checkListRightClick(MouseEvent e) {
+		if (e.getButton() == MouseEvent.BUTTON3) {
+			ArrayList<Main.ClipData> toRemove = new ArrayList<>();
+			toRemove.addAll(listPlaying.getSelectedValuesList());
+			//Prevent concurrent mod error
+			toRemove.forEach(data -> data.clip.close());
+			Main.getPlaying().removeAll(toRemove);
+			ListIterator<Main.ClipData> iter = Main.getPlaying().listIterator();
+			System.out.println("O BOY");
+			Main.getPlaying().forEach(ev -> System.out.println(ev));
+			updatePlaying();
+			//Cleanup handled by closelistener
 		}
 	}
 
@@ -143,11 +160,11 @@ public class FormMain {
 
 	void updatePlaying() {
 		EventQueue.invokeLater(() ->
-				listPlaying.setListData(Main.getPlaying().stream()
-						.filter(e -> e.getValue().info == Main.getInfoCable())
-						.map(e -> e.getValue().name)
-						.toArray(String[]::new)
-				)
+				//				listPlaying.setListData(Main.getPlaying().stream()
+				//						.filter(e -> e.info == Main.getInfoCable())
+				//						.toArray(Main.ClipData[]::new)
+				//				)
+				listPlaying.setListData(Main.getPlaying().toArray(new Main.ClipData[Main.getPlaying().size()]))
 		);
 	}
 

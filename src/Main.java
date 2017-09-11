@@ -1,4 +1,3 @@
-import javafx.util.Pair;
 import org.jnativehook.GlobalScreen;
 import org.jnativehook.keyboard.NativeKeyEvent;
 import org.jnativehook.keyboard.NativeKeyListener;
@@ -13,9 +12,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
-	private static final ArrayList<FloatControl>                   gains              = new ArrayList<>();
 	private static final java.util.HashMap<Integer, EnumKeyAction> keybindings        = new HashMap<>();
-	private static final ArrayList<Pair<Clip, ClipData>>           playingClips       = new ArrayList<>();
+	private static final ArrayList<ClipData>                       playingClips       = new ArrayList<>();
 	static               boolean                                   allowParallelAudio = true;
 	static File currentDir;
 	static boolean receivingFilterInput = false;
@@ -101,14 +99,13 @@ public class Main {
 	}
 
 	static void stop() {
-		System.out.println(allowResume);
-		for (Pair<Clip, ClipData> clip : playingClips) {
+		for (ClipData data : playingClips) {
 			if (allowResume) {
-				clip.getKey().setMicrosecondPosition(clip.getValue().time);
-				clip.getKey().start();
+				data.clip.setMicrosecondPosition(data.time);
+				data.clip.start();
 			} else {
-				clip.getValue().time = clip.getKey().getMicrosecondPosition();
-				clip.getKey().stop();
+				data.time = data.clip.getMicrosecondPosition();
+				data.clip.stop();
 			}
 		}
 		if (allowResume) {
@@ -125,8 +122,8 @@ public class Main {
 	}
 
 	private static void playClip(AudioInputStream stream, Mixer.Info info, String name) throws LineUnavailableException, IOException {
-		Clip clip = AudioSystem.getClip(info);
-		Pair<Clip,ClipData> clipPair = new Pair<>(clip, new ClipData(name,info));
+		Clip     clip = AudioSystem.getClip(info);
+		ClipData data = new ClipData(clip, name, info);
 		clip.addLineListener(e -> {
 			LineEvent.Type t = e.getType();
 			if (t == LineEvent.Type.START) {
@@ -135,19 +132,16 @@ public class Main {
 				if (clip.getMicrosecondLength() == clip.getMicrosecondPosition())
 					clip.close();
 			} else if (t == LineEvent.Type.CLOSE) {
-				playingClips.remove(clipPair);
-				gains.remove(clip.getControl(FloatControl.Type.MASTER_GAIN));
+				playingClips.remove(data);
 				window.updatePlaying();
 				System.out.println("Removed clip from queue");
 			}
 		});
 		clip.open(stream);
 
-		FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-		gains.add(gain);
-		setGain(gainMod);
+		updateGains(gainMod);
 		clip.start();
-		playingClips.add(clipPair);
+		playingClips.add(data);
 		window.updatePlaying();
 	}
 
@@ -193,7 +187,7 @@ public class Main {
 		toBind = null;
 	}
 
-	static ArrayList<Pair<Clip, ClipData>> getPlaying() {
+	static ArrayList<ClipData> getPlaying() {
 		return playingClips;
 	}
 
@@ -201,10 +195,11 @@ public class Main {
 		return gainMod;
 	}
 
-	static void setGain(float v) {
+	static void updateGains(float v) {
 		gainMod = v;
 		PreferenceManager.save();
-		for (FloatControl gain : gains) {
+		for (ClipData data : playingClips) {
+			FloatControl gain = (FloatControl) data.clip.getControl(FloatControl.Type.MASTER_GAIN);
 			gain.setValue(((gain.getMaximum() - gain.getMinimum()) * gainMod) + gain.getMinimum());
 		}
 	}
@@ -287,13 +282,20 @@ public class Main {
 	}
 
 	static class ClipData {
-		Long time = -1l;
-		String name;
+		Clip clip;
 		Mixer.Info info;
+		String     name;
+		Long time = -1l;
 
-		ClipData(String name,Mixer.Info info) {
+		ClipData(Clip clip, String name, Mixer.Info info) {
+			this.clip = clip;
 			this.name = name;
 			this.info = info;
+		}
+
+		@Override
+		public String toString() {
+			return (info.equals(Main.getInfoCable()) ? "[Speakers] " : "[Cable] ") +  name;
 		}
 	}
 
