@@ -1,6 +1,8 @@
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Mixer;
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
@@ -25,8 +27,9 @@ class FormMain {
 	private       JCheckBox             chkOnTop;
 	private       JCheckBox             chkParallel;
 	private       JComboBox<Mixer.Info> comboCable;
+	private       JComboBox<Mixer.Info> comboMic;
 	private       JComboBox<Mixer.Info> comboSpeakers;
-	private int debounce = 3;
+	private boolean hasFocus = false;
 	private JLabel               lblStatus;
 	private JList<Main.ClipData> listPlaying;
 	private JPanel               panel;
@@ -39,14 +42,37 @@ class FormMain {
 	public FormMain() {
 		frame = new JFrame("Soundboard");
 
+		for (Mixer.Info v : AudioSystem.getMixerInfo()) {
+			comboCable.addItem(v);
+			comboSpeakers.addItem(v);
+			comboMic.addItem(v);
+		}
+
+		sliderVol.setValue((int) (Main.getGain() * 100));
+		treeSounds.setModel(treeSoundModel = new SoundTreeModel());
+		treeSounds.updateUI();
+		chkOnTop.setSelected(PreferenceManager.alwaysOnTop);
+		chkAutoRelay.setSelected(PreferenceManager.autoRelay);
+
+		if (PreferenceManager.autoRelay)
+			Main.toggleRelay();
+		updateCombos();
+		updateRelay();
+		updateFromDir(Main.currentDir);
+
 		comboCable.addItemListener(e -> {
-			if (e.getStateChange() == ItemEvent.SELECTED && --debounce < 0) {
+			if (e.getStateChange() == ItemEvent.SELECTED) {
 				Main.setInfoCable((Mixer.Info) e.getItem());
 			}
 		});
 		comboSpeakers.addItemListener(e -> {
-			if (e.getStateChange() == ItemEvent.SELECTED && --debounce < 0) {
+			if (e.getStateChange() == ItemEvent.SELECTED) {
 				Main.setInfoSpeakers((Mixer.Info) e.getItem());
+			}
+		});
+		comboMic.addItemListener(e -> {
+			if (e.getStateChange() == ItemEvent.SELECTED) {
+				Main.setInfoMic((Mixer.Info) e.getItem());
 			}
 		});
 
@@ -64,10 +90,9 @@ class FormMain {
 			PreferenceManager.save();
 		});
 		sliderVol.addChangeListener(e -> {
-			if (--debounce < 0) {
-				Main.updateGains(sliderVol.getValue() / 100.0f);
-				PreferenceManager.save();
-			}
+			Main.updateGains(sliderVol.getValue() / 100.0f);
+			PreferenceManager.save();
+
 		});
 		treeSounds.addMouseListener((ClickListener) this::checkTreeRightClick);
 		frame.addWindowListener(new WindowAdapter() {
@@ -76,26 +101,37 @@ class FormMain {
 				PreferenceManager.save();
 			}
 		});
+		frame.addWindowFocusListener(new WindowAdapter() {
+			@Override
+			public void windowGainedFocus(WindowEvent e) {
+				hasFocus = true;
+			}
+
+			@Override
+			public void windowLostFocus(WindowEvent e) {
+				hasFocus = false;
+			}
+		});
+
 		txtFilter.addActionListener((e) -> updateFilter());
+		txtFilter.getDocument().addDocumentListener(new DocumentListener() {
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				updateFilter();
+			}
+
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				updateFilter();
+			}
+
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				updateFilter();
+			}
+		});
 		listPlaying.addMouseListener((ClickListener) this::checkListRightClick);
 		splitPane.addPropertyChangeListener(JSplitPane.DIVIDER_LOCATION_PROPERTY, (e) -> PreferenceManager.save());
-
-		for (Mixer.Info v : AudioSystem.getMixerInfo()) {
-			comboCable.addItem(v);
-			comboSpeakers.addItem(v);
-		}
-		updateCombos();
-
-		sliderVol.setValue((int) (Main.getGain() * 100));
-		treeSounds.setModel(treeSoundModel = new SoundTreeModel());
-		treeSounds.updateUI();
-		chkOnTop.setSelected(PreferenceManager.alwaysOnTop);
-		chkAutoRelay.setSelected(PreferenceManager.autoRelay);
-		if (PreferenceManager.autoRelay) {
-			updateRelay();
-		}
-
-		updateFromDir(Main.currentDir);
 
 		//noinspection MagicConstant
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -124,6 +160,7 @@ class FormMain {
 	}
 
 	private void checkTreeRightClick(MouseEvent e) {
+		btnPlay.setText("Play [" + getSelectedFiles().size() + "]");
 		if (e.getButton() == MouseEvent.BUTTON3) {
 			TreePath path = treeSounds.getPathForLocation(e.getPoint().x, e.getPoint().y);
 			if (path != null) {
@@ -185,20 +222,23 @@ class FormMain {
 	}
 
 	void updateCombos() {
-		debounce = 2;
 		comboCable.setSelectedItem(Main.getInfoCable());
 		comboSpeakers.setSelectedItem(Main.getInfoSpeakers());
-		debounce = 0;
+		comboMic.setSelectedItem(Main.getInfoMic());
 	}
 
 	void updateRelay() {
-		Main.toggleRelay();
-		btnRelay.setText("Relay " + (Main.isRelaying() ? "stop" : "start"));
+		comboSpeakers.setEnabled(!Main.isRelaying());
 		comboCable.setEnabled(!Main.isRelaying());
+		comboMic.setEnabled(!Main.isRelaying());
+		updateButtons();
 	}
 
 	void updateButtons() {
-		EventQueue.invokeLater(() -> btnStop.setText(Main.allowResume ? "Resume" : "Stop"));
+		EventQueue.invokeLater(() -> {
+			btnStop.setText(Main.allowResume ? "Resume" : "Stop");
+			btnRelay.setText("Relay " + (Main.isRelaying() ? "stop" : "start"));
+		});
 	}
 
 	void updateFilter() {
@@ -224,7 +264,12 @@ class FormMain {
 	}
 
 	void focus() {
-		Main.receivingFilterInput = true;
+		System.out.println(hasFocus);
+		if (hasFocus) {
+			txtFilter.requestFocus();
+		} else {
+			Main.receivingFilterInput = true;
+		}
 	}
 
 	void addInput(String c) {
