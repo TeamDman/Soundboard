@@ -27,9 +27,11 @@ public class Main {
 	static FormRename windowRename;
 	private static float gainMod = 1.0f;
 	private static Mixer.Info           infoCable;
+	private static Mixer.Info           infoMic;
 	private static Mixer.Info           infoSpeakers;
 	private static MicManager.ThreadMic threadMic;
 	private static EnumKeyAction        toBind;
+	static boolean ctrlDown = false;
 
 	static {
 		EnumKeyAction.PLAY.setAction(() -> Main.play(Main.window.getSelectedFiles()));
@@ -38,7 +40,7 @@ public class Main {
 		EnumKeyAction.VOLDOWN.setAction(Main::decreaseGain);
 		EnumKeyAction.NEXT.setAction(Main::soundNext);
 		EnumKeyAction.PREV.setAction(Main::soundPrev);
-		EnumKeyAction.RELAY.setAction(() -> window.updateRelay());
+		EnumKeyAction.RELAY.setAction(Main::toggleRelay);
 		EnumKeyAction.FOCUS.setAction(() -> window.focus());
 		EnumKeyAction.CLEAR.setAction(() -> stop(playingClips));
 	}
@@ -54,9 +56,7 @@ public class Main {
 		GlobalScreen.addNativeKeyListener(new GlobalKeyListener());
 		Logger.getLogger(GlobalScreen.class.getPackage().getName()).setLevel(Level.OFF);
 		PreferenceManager.init();
-		EventQueue.invokeLater(() ->
-				window = new FormMain()
-		);
+		EventQueue.invokeLater(() -> window = new FormMain());
 
 	}
 
@@ -207,6 +207,20 @@ public class Main {
 			window.updateCombos();
 	}
 
+	static Mixer.Info getInfoMic() {
+		return infoMic;
+	}
+
+	static void setInfoMic(Mixer.Info info) {
+		boolean update = infoMic != null;
+		infoMic = info;
+		if (update)
+			PreferenceManager.save();
+		if (window != null)
+			window.updateCombos();
+
+	}
+
 	static void setToBind(EnumKeyAction action) {
 		toBind = action;
 	}
@@ -230,6 +244,8 @@ public class Main {
 			threadMic = new MicManager.ThreadMic();
 			threadMic.start();
 		}
+		if (window != null)
+			EventQueue.invokeLater(window::updateRelay);
 	}
 
 	private static void soundNext() {
@@ -312,6 +328,8 @@ public class Main {
 		}
 
 		public void nativeKeyPressed(NativeKeyEvent e) {
+			if (e.getKeyCode() == NativeKeyEvent.VC_CONTROL)
+				ctrlDown = true;
 			if (toBind != null) {
 				System.out.println("BINDING KEY");
 				toBind.setKey(e.getRawCode(), NativeKeyEvent.getKeyText(e.getKeyCode()));
@@ -321,6 +339,7 @@ public class Main {
 			} else {
 				for (EnumKeyAction action : EnumKeyAction.values()) {
 					if (action.getKey() == e.getRawCode()) {
+						receivingFilterInput = false;
 						action.getAction().run();
 						return;
 					}
@@ -336,6 +355,8 @@ public class Main {
 
 		@Override
 		public void nativeKeyReleased(NativeKeyEvent e) {
+			if (e.getKeyCode() == NativeKeyEvent.VC_CONTROL)
+				ctrlDown = false;
 		}
 	}
 }
