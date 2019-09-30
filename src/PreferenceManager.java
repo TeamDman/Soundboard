@@ -27,15 +27,20 @@ class PreferenceManager {
 		Mixer.Info[] infos        = AudioSystem.getMixerInfo();
 		String       nameCable    = prefs.get("nameCable", null);
 		String       nameSpeakers = prefs.get("nameSpeakers", null);
+		String       nameMic      = prefs.get("nameMic", null);
 		if (nameCable == null)
 			Main.setInfoCable(infos[0]);
 		if (nameSpeakers == null)
 			Main.setInfoSpeakers(infos[0]);
+		if (nameMic == null)
+			Main.setInfoMic(infos[0]);
 		for (Mixer.Info v : infos) {
 			if (v.getName().equals(nameCable))
 				Main.setInfoCable(v);
-			else if (v.getName().equals(nameSpeakers))
+			if (v.getName().equals(nameSpeakers))
 				Main.setInfoSpeakers(v);
+			if (v.getName().equals(nameMic))
+				Main.setInfoMic(v);
 		}
 
 		if (Main.window != null)
@@ -48,6 +53,7 @@ class PreferenceManager {
 		prefs.putBoolean("autorelay", autoRelay);
 		prefs.put("nameCable", Main.getInfoCable().getName());
 		prefs.put("nameSpeakers", Main.getInfoSpeakers().getName());
+		prefs.put("nameMic", Main.getInfoMic().getName());
 		for (Main.EnumKeyAction action : Main.EnumKeyAction.values()) {
 			prefs.putInt(action.name() + "key", action.getKey());
 			prefs.put(action.name() + "keyName", action.getKeyName());
