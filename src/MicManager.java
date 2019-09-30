@@ -10,7 +10,7 @@ class MicManager {
 			DataLine.Info targetInfo = new DataLine.Info(TargetDataLine.class,format);
 			DataLine.Info sourceInfo = new DataLine.Info(SourceDataLine.class,format);
 			try {
-				TargetDataLine targetLine = (TargetDataLine) AudioSystem.getLine(targetInfo);
+				TargetDataLine targetLine = (TargetDataLine) AudioSystem.getMixer(Main.getInfoMic()).getLine(targetInfo);//AudioSystem.getLine(targetInfo);
 				targetLine.open(format);
 				targetLine.start();
 
