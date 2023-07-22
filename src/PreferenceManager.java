@@ -48,24 +48,29 @@ class PreferenceManager {
 	}
 
 	public static void save() {
-		prefs.put("startdir", Main.currentDir.getAbsolutePath());
-		prefs.putFloat("gain", Main.getGain());
-		prefs.putBoolean("autorelay", autoRelay);
-		prefs.put("nameCable", Main.getInfoCable().getName());
-		prefs.put("nameSpeakers", Main.getInfoSpeakers().getName());
-		prefs.put("nameMic", Main.getInfoMic().getName());
-		for (Main.EnumKeyAction action : Main.EnumKeyAction.values()) {
-			prefs.putInt(action.name() + "key", action.getKey());
-			prefs.put(action.name() + "keyName", action.getKeyName());
-		}
+		try {
+			prefs.put("startdir", Main.currentDir.getAbsolutePath());
+			prefs.putFloat("gain", Main.getGain());
+			prefs.putBoolean("autorelay", autoRelay);
+			prefs.put("nameCable", Main.getInfoCable().getName());
+			prefs.put("nameSpeakers", Main.getInfoSpeakers().getName());
+			prefs.put("nameMic", Main.getInfoMic().getName());
+			for (Main.EnumKeyAction action : Main.EnumKeyAction.values()) {
+				prefs.putInt(action.name() + "key", action.getKey());
+				prefs.put(action.name() + "keyName", action.getKeyName());
+			}
 
-		if (Main.window != null) {
-			prefs.putInt("windowx", Main.window.getX());
-			prefs.putInt("windowy", Main.window.getY());
-			prefs.putInt("windoww", Main.window.getWidth());
-			prefs.putInt("windowh", Main.window.getHeight());
-			prefs.putInt("dividerx", Main.window.getDividerX());
-			Main.window.updateStatus("Prefs saved");
+			if (Main.window != null) {
+				prefs.putInt("windowx", Main.window.getX());
+				prefs.putInt("windowy", Main.window.getY());
+				prefs.putInt("windoww", Main.window.getWidth());
+				prefs.putInt("windowh", Main.window.getHeight());
+				prefs.putInt("dividerx", Main.window.getDividerX());
+				Main.window.updateStatus("Prefs saved");
+			}
+		} catch (Exception e) {
+			System.out.println("Error saving prefs");
+			e.printStackTrace();
 		}
 	}
 }

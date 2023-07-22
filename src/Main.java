@@ -80,10 +80,10 @@ public class Main {
 						AudioInputStream stream = AudioSystem.getAudioInputStream(file);
 						AudioFormat      format = new AudioFormat(44100, 16, 2, true, true);
 						playClip(AudioSystem.getAudioInputStream(format, stream), infoSpeakers, file.getName());
-
-						AudioInputStream streama = AudioSystem.getAudioInputStream(file);
-						AudioFormat      formata = new AudioFormat(44100, 16, 2, true, true);
-						playClip(AudioSystem.getAudioInputStream(formata, streama), infoCable, file.getName());
+//
+//						AudioInputStream streama = AudioSystem.getAudioInputStream(file);
+//						AudioFormat      formata = new AudioFormat(44100, 16, 2, true, true);
+//						playClip(AudioSystem.getAudioInputStream(formata, streama), infoCable, file.getName());
 
 						//				AudioFormat formatBase = stream.getFormat();
 						//				AudioFormat format = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
